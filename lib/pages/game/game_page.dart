@@ -7,12 +7,18 @@ import '../../models/customer.dart';
 import '../../models/level.dart';
 import '../../services/game_service.dart';
 import '../../services/level_service.dart';
+import '../../services/progress_service.dart';
 import '../../widgets/customer_queues.dart';
 import '../../widgets/game_board.dart';
 import '../../widgets/parking_area.dart';
 
 class GamePage extends StatefulWidget {
-  const GamePage({super.key});
+  final int levelNumber;
+
+  const GamePage({
+    super.key,
+    this.levelNumber = 1,
+  });
 
   @override
   State<GamePage> createState() => _GamePageState();
@@ -24,17 +30,20 @@ class _GamePageState extends State<GamePage> {
   late List<Bus> _buses;
   late List<Customer> _queueA;
   late List<Customer> _queueB;
-
   late List<Bus?> _parkingSlots;
 
   final int _unlockedExtraSlots = 0;
 
   bool _levelCompleted = false;
+  bool _savingCompletion = false;
+
+  int _mistakes = 0;
+  int _earnedStars = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadLevel(1);
+    _loadLevel(widget.levelNumber);
   }
 
   void _loadLevel(int levelNumber) {
@@ -50,6 +59,9 @@ class _GamePageState extends State<GamePage> {
     );
 
     _levelCompleted = false;
+    _savingCompletion = false;
+    _mistakes = 0;
+    _earnedStars = 0;
   }
 
   void _restartLevel() {
@@ -130,6 +142,7 @@ class _GamePageState extends State<GamePage> {
             children: [
               _buildHeader(),
               _buildLevelInfo(),
+              _buildStarProgress(),
               CustomerQueues(
                 queueA: _queueA,
                 queueB: _queueB,
@@ -248,6 +261,51 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
+  Widget _buildStarProgress() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 18,
+        vertical: 8,
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.star_rounded,
+            color: AppColors.gold,
+            size: 20,
+          ),
+          const SizedBox(width: 6),
+          const Text(
+            'MISTAKES:',
+            style: TextStyle(
+              color: AppColors.secondaryText,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$_mistakes',
+            style: const TextStyle(
+              color: AppColors.primaryText,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const Spacer(),
+          const Text(
+            '3 STARS POSSIBLE',
+            style: TextStyle(
+              color: AppColors.gold,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBoardSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -332,7 +390,7 @@ class _GamePageState extends State<GamePage> {
     );
 
     if (freeSlot == -1) {
-      _showMessage('Parking is full!');
+      _registerMistake('Parking is full!');
       return;
     }
 
@@ -347,7 +405,7 @@ class _GamePageState extends State<GamePage> {
     );
 
     if (!canExit) {
-      _showMessage('The bus exit is blocked!');
+      _registerMistake('The bus exit is blocked!');
       return;
     }
 
@@ -358,6 +416,14 @@ class _GamePageState extends State<GamePage> {
     });
 
     _checkLevelCompletion();
+  }
+
+  void _registerMistake(String message) {
+    setState(() {
+      _mistakes++;
+    });
+
+    _showMessage('$message Mistakes: $_mistakes');
   }
 
   void _processBoarding() {
@@ -372,6 +438,18 @@ class _GamePageState extends State<GamePage> {
     _queueB = result.queueB;
   }
 
+  int _calculateStars() {
+    if (_mistakes == 0) {
+      return 3;
+    }
+
+    if (_mistakes <= 2) {
+      return 2;
+    }
+
+    return 1;
+  }
+
   void _checkLevelCompletion() {
     final completed = GameService.isLevelComplete(
       remainingBuses: _buses,
@@ -380,19 +458,54 @@ class _GamePageState extends State<GamePage> {
       queueB: _queueB,
     );
 
-    if (!completed || _levelCompleted) {
+    if (!completed || _levelCompleted || _savingCompletion) {
       return;
     }
 
     _levelCompleted = true;
+    _savingCompletion = true;
+    _earnedStars = _calculateStars();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
+    _saveCompletionAndShowDialog();
+  }
+
+  Future<void> _saveCompletionAndShowDialog() async {
+    try {
+      await ProgressService.saveLevelCompletion(
+        levelNumber: _level.number,
+        stars: _earnedStars,
+      );
+    } catch (error) {
+      if (mounted) {
+        _showMessage('Could not save progress: $error');
       }
+    }
 
-      _showLevelCompletedDialog();
-    });
+    if (!mounted) {
+      return;
+    }
+
+    _savingCompletion = false;
+    _showLevelCompletedDialog();
+  }
+
+  Widget _buildEarnedStars() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(
+        3,
+        (index) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 5),
+          child: Icon(
+            Icons.star_rounded,
+            size: 38,
+            color: index < _earnedStars
+                ? AppColors.gold
+                : AppColors.secondaryText.withValues(alpha: 0.3),
+          ),
+        ),
+      ),
+    );
   }
 
   void _showLevelCompletedDialog() {
@@ -413,12 +526,35 @@ class _GamePageState extends State<GamePage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          content: const Text(
-            'Great job! All buses and passengers have been cleared.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.primaryText,
-            ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildEarnedStars(),
+              const SizedBox(height: 12),
+              Text(
+                'You earned $_earnedStars out of 3 stars!',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.primaryText,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Mistakes: $_mistakes',
+                style: const TextStyle(
+                  color: AppColors.secondaryText,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Great job! All buses and passengers have been cleared.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.primaryText,
+                ),
+              ),
+            ],
           ),
           actionsAlignment: MainAxisAlignment.center,
           actions: [
