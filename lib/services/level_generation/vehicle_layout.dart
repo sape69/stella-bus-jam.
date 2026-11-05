@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
 
-import '../../../models/bus.dart';
+import '../../models/bus.dart';
 
 class VehicleLayout {
   final int x;
