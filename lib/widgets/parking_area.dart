@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
@@ -5,13 +6,13 @@ import '../models/bus.dart';
 import 'parking_slot.dart';
 
 class ParkingArea extends StatelessWidget {
-  final List<Bus> parkedBuses;
+  final List<Bus?> parkingSlots;
   final int unlockedExtraSlots;
   final ValueChanged<int>? onUnlockSlot;
 
   const ParkingArea({
     super.key,
-    this.parkedBuses = const [],
+    this.parkingSlots = const [],
     this.unlockedExtraSlots = 0,
     this.onUnlockSlot,
   });
@@ -45,11 +46,12 @@ class ParkingArea extends StatelessWidget {
                   const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final slotNumber = index + 1;
+
                 final isUnlocked =
                     slotNumber <= 3 + unlockedExtraSlots;
 
-                final bus = index < parkedBuses.length
-                    ? parkedBuses[index]
+                final bus = index < parkingSlots.length
+                    ? parkingSlots[index]
                     : null;
 
                 return ParkingSlot(
