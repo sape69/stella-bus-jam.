@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
@@ -14,6 +15,19 @@ class GameBoard extends StatelessWidget {
     this.buses = const [],
     this.onBusTap,
   });
+
+  IconData _exitArrow(Bus bus) {
+    switch (bus.exitDirection) {
+      case BusExitDirection.up:
+        return Icons.arrow_upward_rounded;
+      case BusExitDirection.down:
+        return Icons.arrow_downward_rounded;
+      case BusExitDirection.left:
+        return Icons.arrow_back_rounded;
+      case BusExitDirection.right:
+        return Icons.arrow_forward_rounded;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +50,7 @@ class GameBoard extends StatelessWidget {
 
             return Stack(
               children: [
-                _buildGrid(cellSize),
+                _buildGrid(),
                 ...buses.map(
                   (bus) => _buildBus(bus, cellSize),
                 ),
@@ -48,7 +62,7 @@ class GameBoard extends StatelessWidget {
     );
   }
 
-  Widget _buildGrid(double cellSize) {
+  Widget _buildGrid() {
     return Column(
       children: List.generate(
         boardSize,
@@ -110,9 +124,7 @@ class GameBoard extends StatelessWidget {
           ),
           child: Center(
             child: Icon(
-              isHorizontal
-                  ? Icons.arrow_forward_rounded
-                  : Icons.arrow_downward_rounded,
+              _exitArrow(bus),
               color: Colors.white,
               size: 25,
             ),
