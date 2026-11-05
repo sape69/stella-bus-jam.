@@ -13,8 +13,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static const int _visibleLevelCount = 100;
-
   int _unlockedLevel = 1;
   int _totalStars = 0;
   bool _isLoading = true;
@@ -27,7 +25,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadProgress() async {
     try {
-      final results = await Future.wait([
+      final results = await Future.wait<int>([
         ProgressService.getUnlockedLevel(),
         ProgressService.getTotalStars(),
       ]);
@@ -35,8 +33,8 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
 
       setState(() {
-        _unlockedLevel = results[0] as int;
-        _totalStars = results[1] as int;
+        _unlockedLevel = results[0];
+        _totalStars = results[1];
         _isLoading = false;
       });
     } catch (_) {
