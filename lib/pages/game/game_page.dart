@@ -52,6 +52,73 @@ class _GamePageState extends State<GamePage> {
     _levelCompleted = false;
   }
 
+  void _restartLevel() {
+    setState(() {
+      _loadLevel(_level.number);
+    });
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Level restarted!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+  }
+
+  Future<void> _confirmRestart() async {
+    final shouldRestart = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.card,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'RESTART LEVEL?',
+            style: TextStyle(
+              color: AppColors.gold,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            'Are you sure you want to start this level again? '
+            'Your current progress in this level will be lost.',
+            style: TextStyle(
+              color: AppColors.primaryText,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text(
+                'CANCEL',
+                style: TextStyle(
+                  color: AppColors.secondaryText,
+                ),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('RESTART'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldRestart == true && mounted) {
+      _restartLevel();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,16 +162,27 @@ class _GamePageState extends State<GamePage> {
             size: 30,
           ),
           const SizedBox(width: 10),
-          const Text(
-            'STELLA BUS JAM',
-            style: TextStyle(
-              color: AppColors.primaryText,
-              fontSize: 19,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
+          const Expanded(
+            child: Text(
+              'STELLA BUS JAM',
+              style: TextStyle(
+                color: AppColors.primaryText,
+                fontSize: 19,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const Spacer(),
+          IconButton(
+            onPressed: _confirmRestart,
+            tooltip: 'Restart level',
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: AppColors.pink,
+              size: 27,
+            ),
+          ),
           _buildLevelBadge(),
         ],
       ),
