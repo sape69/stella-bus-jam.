@@ -64,6 +64,58 @@ class _GamePageState extends State<GamePage> {
     _earnedStars = 0;
   }
 
+  Future<void> _confirmExitToHome() async {
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.card,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'EXIT TO HOME?',
+            style: TextStyle(
+              color: AppColors.gold,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            'Are you sure you want to leave this level? '
+            'Your current progress in this level will be lost.',
+            style: TextStyle(
+              color: AppColors.primaryText,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text(
+                'CANCEL',
+                style: TextStyle(
+                  color: AppColors.secondaryText,
+                ),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              icon: const Icon(Icons.home_rounded),
+              label: const Text('GO HOME'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldExit == true && mounted) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
+
   void _restartLevel() {
     setState(() {
       _loadLevel(_level.number);
@@ -169,18 +221,27 @@ class _GamePageState extends State<GamePage> {
       ),
       child: Row(
         children: [
+          IconButton(
+            onPressed: _confirmExitToHome,
+            tooltip: 'Back to home',
+            icon: const Icon(
+              Icons.arrow_back_rounded,
+              color: AppColors.purple,
+              size: 27,
+            ),
+          ),
           const Icon(
             Icons.pets,
             color: AppColors.pink,
             size: 30,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           const Expanded(
             child: Text(
               'STELLA BUS JAM',
               style: TextStyle(
                 color: AppColors.primaryText,
-                fontSize: 19,
+                fontSize: 17,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1,
               ),
