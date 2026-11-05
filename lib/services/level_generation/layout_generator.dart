@@ -1,6 +1,7 @@
 
 import 'dart:math' as math;
 
+import '../../models/bus.dart';
 import 'difficulty_config.dart';
 import 'seeded_random.dart';
 import 'vehicle_layout.dart';
@@ -20,6 +21,7 @@ class LayoutGenerator {
 
       for (var i = 0; i < difficulty.busCount; i++) {
         final length = 2 + (i % 3);
+
         final candidates = _findCandidates(
           difficulty.boardSize,
           length,
@@ -47,7 +49,9 @@ class LayoutGenerator {
           math.max(4, (scored.length * 0.25).ceil()),
         );
 
-        final selected = scored[random.nextInt(shortlistSize)].vehicle;
+        final selected =
+            scored[random.nextInt(shortlistSize)].vehicle;
+
         vehicles.add(selected);
       }
 
@@ -198,7 +202,6 @@ class LayoutGenerator {
     SeededRandom random,
   ) {
     var blockedExits = 0;
-
     final candidateCells = _cells(candidate).toSet();
 
     for (final other in existing) {
@@ -210,9 +213,11 @@ class LayoutGenerator {
     }
 
     final distance = switch (candidate.direction) {
-      BusExitDirection.right => size - candidate.x - candidate.length,
+      BusExitDirection.right =>
+        size - candidate.x - candidate.length,
       BusExitDirection.left => candidate.x,
-      BusExitDirection.down => size - candidate.y - candidate.length,
+      BusExitDirection.down =>
+        size - candidate.y - candidate.length,
       BusExitDirection.up => candidate.y,
     };
 
