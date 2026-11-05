@@ -1,7 +1,8 @@
+
 import 'package:flutter/material.dart';
 
 import 'core/theme/app_theme.dart';
-import 'pages/game/game_page.dart';
+import 'pages/home/home_page.dart';
 
 class StellaBusJamApp extends StatelessWidget {
   const StellaBusJamApp({super.key});
@@ -12,7 +13,7 @@ class StellaBusJamApp extends StatelessWidget {
       title: 'Stella Bus Jam',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const GamePage(),
+      home: const HomePage(),
     );
   }
 }
