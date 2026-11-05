@@ -29,7 +29,9 @@ class LevelValidator {
     final customersB = List<Customer>.from(queueB);
 
     for (final busIndex in layout.exitOrder) {
-      if (!remaining.contains(busIndex)) return false;
+      if (!remaining.contains(busIndex)) {
+        return false;
+      }
 
       final vehicle = layout.vehicles[busIndex];
 
@@ -46,11 +48,11 @@ class LevelValidator {
         return false;
       }
 
-      final freeSlot = parking.indexWhere(
-        (bus) => bus == null,
-      );
+      final freeSlot = parking.indexWhere((bus) => bus == null);
 
-      if (freeSlot == -1) return false;
+      if (freeSlot == -1) {
+        return false;
+      }
 
       parking[freeSlot] = buses[busIndex];
       remaining.remove(busIndex);
@@ -73,30 +75,48 @@ class LevelValidator {
     List<Customer> queueA,
     List<Customer> queueB,
   ) {
-    for (var i = 0; i < parking.length; i++) {
-      final parkedBus = parking[i];
+    var changed = true;
 
-      if (parkedBus == null) continue;
+    while (changed) {
+      changed = false;
 
-      var bus = parkedBus;
+      for (var i = 0; i < parking.length; i++) {
+        final parkedBus = parking[i];
 
-      while (!bus.isFull) {
-        if (queueA.isNotEmpty &&
-            queueA.first.color == bus.color) {
-          queueA.removeAt(0);
-        } else if (queueB.isNotEmpty &&
-            queueB.first.color == bus.color) {
-          queueB.removeAt(0);
-        } else {
-          break;
+        if (parkedBus == null) {
+          continue;
         }
 
-        bus = bus.copyWith(
-          passengers: bus.passengers + 1,
-        );
-      }
+        var bus = parkedBus;
+        final passengersBefore = bus.passengers;
 
-      parking[i] = bus.isFull ? null : bus;
+        while (!bus.isFull) {
+          if (queueA.isNotEmpty &&
+              queueA.first.color == bus.color) {
+            queueA.removeAt(0);
+          } else if (queueB.isNotEmpty &&
+              queueB.first.color == bus.color) {
+            queueB.removeAt(0);
+          } else {
+            break;
+          }
+
+          bus = bus.copyWith(
+            passengers: bus.passengers + 1,
+          );
+        }
+
+        if (bus.passengers > passengersBefore) {
+          changed = true;
+        }
+
+        if (bus.isFull) {
+          parking[i] = null;
+          changed = true;
+        } else {
+          parking[i] = bus;
+        }
+      }
     }
   }
 
@@ -112,24 +132,30 @@ class LevelValidator {
     }
 
     for (final cell in _exitRay(vehicle, size)) {
-      if (occupied.contains(cell)) return false;
+      if (occupied.contains(cell)) {
+        return false;
+      }
     }
 
     return true;
   }
 
-  static List<BoardCell> _cells(
-    VehicleLayout vehicle,
-  ) {
+  static List<BoardCell> _cells(VehicleLayout vehicle) {
     return List.generate(vehicle.length, (index) {
       switch (vehicle.direction) {
         case BusExitDirection.left:
         case BusExitDirection.right:
-          return BoardCell(vehicle.x + index, vehicle.y);
+          return BoardCell(
+            vehicle.x + index,
+            vehicle.y,
+          );
 
         case BusExitDirection.up:
         case BusExitDirection.down:
-          return BoardCell(vehicle.x, vehicle.y + index);
+          return BoardCell(
+            vehicle.x,
+            vehicle.y + index,
+          );
       }
     });
   }
@@ -142,7 +168,9 @@ class LevelValidator {
 
     switch (vehicle.direction) {
       case BusExitDirection.right:
-        for (var x = vehicle.x + vehicle.length; x < size; x++) {
+        for (var x = vehicle.x + vehicle.length;
+            x < size;
+            x++) {
           cells.add(BoardCell(x, vehicle.y));
         }
         break;
@@ -154,7 +182,9 @@ class LevelValidator {
         break;
 
       case BusExitDirection.down:
-        for (var y = vehicle.y + vehicle.length; y < size; y++) {
+        for (var y = vehicle.y + vehicle.length;
+            y < size;
+            y++) {
           cells.add(BoardCell(vehicle.x, y));
         }
         break;
