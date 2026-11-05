@@ -1,13 +1,41 @@
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:stella_bus_jam/app.dart';
 
 void main() {
-  testWidgets('Stella Bus Jam app starts', (WidgetTester tester) async {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  testWidgets('Stella Bus Jam home page starts', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const StellaBusJamApp());
 
-    expect(find.text('STELLA BUS JAM'), findsOneWidget);
-    expect(find.text('PASSENGER QUEUES'), findsOneWidget);
-    expect(find.text('BUS PARKING'), findsOneWidget);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('WELCOME TO STELLA BUS JAM!'),
+      findsOneWidget,
+    );
+
+    expect(
+      find.text('PLAY LEVEL 1'),
+      findsOneWidget,
+    );
+
+    expect(
+      find.text('SELECT LEVEL'),
+      findsOneWidget,
+    );
+
+    expect(
+      find.text('TOTAL STARS'),
+      findsOneWidget,
+    );
   });
 }
