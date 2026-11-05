@@ -39,21 +39,31 @@ class ProgressService {
   }
 
   /// Saves a completed level and unlocks the next one.
-  ///
   /// Only the best star result for each level is retained.
   static Future<int> saveLevelCompletion({
     required int levelNumber,
     required int stars,
   }) async {
+    if (levelNumber < 1) {
+      throw ArgumentError.value(
+        levelNumber,
+        'levelNumber',
+        'Level number must be at least 1.',
+      );
+    }
+
     final preferences = await SharedPreferences.getInstance();
 
-    final safeStars = stars.clamp(1, 3);
+    final safeStars = stars.clamp(1, 3).toInt();
     final starsKey = '$_levelStarsPrefix$levelNumber';
 
     final previousStars = preferences.getInt(starsKey) ?? 0;
 
-    if (safeStars > previousStars) {
-      await preferences.setInt(starsKey, safeStars);
+    final bestStars =
+        safeStars > previousStars ? safeStars : previousStars;
+
+    if (bestStars > previousStars) {
+      await preferences.setInt(starsKey, bestStars);
     }
 
     final currentUnlockedLevel =
@@ -65,11 +75,15 @@ class ProgressService {
       await preferences.setInt(_unlockedLevelKey, nextLevel);
     }
 
-    return safeStars > previousStars ? safeStars : previousStars;
+    return bestStars;
   }
 
   /// Checks whether a level is unlocked.
   static Future<bool> isLevelUnlocked(int levelNumber) async {
+    if (levelNumber < 1) {
+      return false;
+    }
+
     final unlockedLevel = await getUnlockedLevel();
 
     return levelNumber <= unlockedLevel;
