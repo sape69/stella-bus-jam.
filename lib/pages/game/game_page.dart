@@ -1,24 +1,54 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../models/level.dart';
+import '../../services/level_service.dart';
+import '../../widgets/customer_queues.dart';
+import '../../widgets/game_board.dart';
+import '../../widgets/parking_area.dart';
 
-class GamePage extends StatelessWidget {
+class GamePage extends StatefulWidget {
   const GamePage({super.key});
+
+  @override
+  State<GamePage> createState() => _GamePageState();
+}
+
+class _GamePageState extends State<GamePage> {
+  late Level _level;
+
+  int _unlockedExtraSlots = 0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _level = LevelService.createLevel(1);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: Center(
-                child: _buildWelcomeContent(),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: Column(
+            children: [
+              _buildHeader(),
+              _buildLevelInfo(),
+              CustomerQueues(
+                queueA: _level.queueA,
+                queueB: _level.queueB,
               ),
-            ),
-          ],
+              ParkingArea(
+                unlockedExtraSlots: _unlockedExtraSlots,
+                onUnlockSlot: _showAdMessage,
+              ),
+              _buildBoardSection(),
+              _buildBottomInfo(),
+            ],
+          ),
         ),
       ),
     );
@@ -27,8 +57,8 @@ class GamePage extends StatelessWidget {
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 16,
+        horizontal: 18,
+        vertical: 14,
       ),
       child: Row(
         children: [
@@ -42,9 +72,9 @@ class GamePage extends StatelessWidget {
             'STELLA BUS JAM',
             style: TextStyle(
               color: AppColors.primaryText,
-              fontSize: 21,
+              fontSize: 19,
               fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
+              letterSpacing: 1,
             ),
           ),
           const Spacer(),
@@ -57,19 +87,19 @@ class GamePage extends StatelessWidget {
   Widget _buildLevelBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: 14,
+        horizontal: 13,
         vertical: 8,
       ),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: AppColors.purple,
         ),
       ),
-      child: const Text(
-        'LEVEL 1',
-        style: TextStyle(
+      child: Text(
+        'LEVEL ${_level.number}',
+        style: const TextStyle(
           color: AppColors.gold,
           fontWeight: FontWeight.bold,
         ),
@@ -77,38 +107,127 @@ class GamePage extends StatelessWidget {
     );
   }
 
-  Widget _buildWelcomeContent() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(
-          Icons.directions_bus_rounded,
-          size: 90,
-          color: AppColors.purple,
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'STELLA BUS JAM',
-          style: TextStyle(
-            color: AppColors.primaryText,
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
+  Widget _buildLevelInfo() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 18,
+        vertical: 4,
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.people_alt_rounded,
+            color: AppColors.pink,
+            size: 19,
           ),
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          'Get the passengers on the right buses!',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppColors.secondaryText,
-            fontSize: 15,
+          const SizedBox(width: 7),
+          Text(
+            '${_level.totalCustomers} PASSENGERS',
+            style: const TextStyle(
+              color: AppColors.secondaryText,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          const Spacer(),
+          Text(
+            '${_level.totalBuses} BUSES',
+            style: const TextStyle(
+              color: AppColors.secondaryText,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBoardSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 8,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(
+              left: 4,
+              bottom: 10,
+            ),
+            child: Text(
+              'BUS PUZZLE',
+              style: TextStyle(
+                color: AppColors.primaryText,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+          GameBoard(
+            boardSize: _level.boardSize,
+            buses: _level.buses,
+            onBusTap: _onBusTap,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomInfo() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(14),
         ),
-        const SizedBox(height: 24),
-        const CircularProgressIndicator(
-          color: AppColors.pink,
+        child: const Row(
+          children: [
+            Icon(
+              Icons.lightbulb_outline,
+              color: AppColors.gold,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Guide the buses out and collect the passengers!',
+                style: TextStyle(
+                  color: AppColors.secondaryText,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  void _onBusTap(dynamic bus) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Bus movement will be added next.',
+        ),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showAdMessage(int slotNumber) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Slot $slotNumber: rewarded ad integration will be added later.',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 }
