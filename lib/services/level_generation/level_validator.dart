@@ -14,11 +14,8 @@ class LevelValidator {
     required List<Customer> queueA,
     required List<Customer> queueB,
   }) {
-    if (buses.length != layout.vehicles.length) {
-      return false;
-    }
-
-    if (layout.exitOrder.length != buses.length) {
+    if (buses.length != layout.vehicles.length ||
+        layout.exitOrder.length != buses.length) {
       return false;
     }
 
@@ -27,18 +24,12 @@ class LevelValidator {
       (index) => index,
     );
 
-    final parking = List<Bus?>.filled(
-      parkingSlots,
-      null,
-    );
-
+    final parking = List<Bus?>.filled(parkingSlots, null);
     final customersA = List<Customer>.from(queueA);
     final customersB = List<Customer>.from(queueB);
 
     for (final busIndex in layout.exitOrder) {
-      if (!remaining.contains(busIndex)) {
-        return false;
-      }
+      if (!remaining.contains(busIndex)) return false;
 
       final vehicle = layout.vehicles[busIndex];
 
@@ -59,9 +50,7 @@ class LevelValidator {
         (bus) => bus == null,
       );
 
-      if (freeSlot == -1) {
-        return false;
-      }
+      if (freeSlot == -1) return false;
 
       parking[freeSlot] = buses[busIndex];
       remaining.remove(busIndex);
@@ -72,12 +61,6 @@ class LevelValidator {
         customersB,
       );
     }
-
-    _processBoarding(
-      parking,
-      customersA,
-      customersB,
-    );
 
     return remaining.isEmpty &&
         parking.every((bus) => bus == null) &&
@@ -90,43 +73,28 @@ class LevelValidator {
     List<Customer> queueA,
     List<Customer> queueB,
   ) {
-    var changed = true;
+    for (var i = 0; i < parking.length; i++) {
+      var bus = parking[i];
 
-    while (changed) {
-      changed = false;
+      if (bus == null) continue;
 
-      for (var i = 0; i < parking.length; i++) {
-        final bus = parking[i];
-
-        if (bus == null || bus.isFull) {
-          parking[i] = null;
-          changed = true;
-          continue;
+      while (!bus.isFull) {
+        if (queueA.isNotEmpty &&
+            queueA.first.color == bus.color) {
+          queueA.removeAt(0);
+        } else if (queueB.isNotEmpty &&
+            queueB.first.color == bus.color) {
+          queueB.removeAt(0);
+        } else {
+          break;
         }
 
-        while (bus.hasSpace) {
-          if (queueA.isNotEmpty &&
-              queueA.first.color == bus.color) {
-            queueA.removeAt(0);
-          } else if (queueB.isNotEmpty &&
-              queueB.first.color == bus.color) {
-            queueB.removeAt(0);
-          } else {
-            break;
-          }
-
-          parking[i] = bus.copyWith(
-            passengers: bus.passengers + 1,
-          );
-
-          changed = true;
-        }
-
-        if (parking[i]?.isFull ?? false) {
-          parking[i] = null;
-          changed = true;
-        }
+        bus = bus.copyWith(
+          passengers: bus.passengers + 1,
+        );
       }
+
+      parking[i] = bus.isFull ? null : bus;
     }
   }
 
@@ -142,9 +110,7 @@ class LevelValidator {
     }
 
     for (final cell in _exitRay(vehicle, size)) {
-      if (occupied.contains(cell)) {
-        return false;
-      }
+      if (occupied.contains(cell)) return false;
     }
 
     return true;
@@ -157,17 +123,11 @@ class LevelValidator {
       switch (vehicle.direction) {
         case BusExitDirection.left:
         case BusExitDirection.right:
-          return BoardCell(
-            vehicle.x + index,
-            vehicle.y,
-          );
+          return BoardCell(vehicle.x + index, vehicle.y);
 
         case BusExitDirection.up:
         case BusExitDirection.down:
-          return BoardCell(
-            vehicle.x,
-            vehicle.y + index,
-          );
+          return BoardCell(vehicle.x, vehicle.y + index);
       }
     });
   }
@@ -180,9 +140,7 @@ class LevelValidator {
 
     switch (vehicle.direction) {
       case BusExitDirection.right:
-        for (var x = vehicle.x + vehicle.length;
-            x < size;
-            x++) {
+        for (var x = vehicle.x + vehicle.length; x < size; x++) {
           cells.add(BoardCell(x, vehicle.y));
         }
         break;
@@ -194,9 +152,7 @@ class LevelValidator {
         break;
 
       case BusExitDirection.down:
-        for (var y = vehicle.y + vehicle.length;
-            y < size;
-            y++) {
+        for (var y = vehicle.y + vehicle.length; y < size; y++) {
           cells.add(BoardCell(vehicle.x, y));
         }
         break;
