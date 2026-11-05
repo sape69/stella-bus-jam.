@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 import '../models/bus.dart';
@@ -11,6 +12,19 @@ class BusWidget extends StatelessWidget {
     required this.bus,
     this.onTap,
   });
+
+  IconData _exitArrow() {
+    switch (bus.exitDirection) {
+      case BusExitDirection.up:
+        return Icons.arrow_upward_rounded;
+      case BusExitDirection.down:
+        return Icons.arrow_downward_rounded;
+      case BusExitDirection.left:
+        return Icons.arrow_back_rounded;
+      case BusExitDirection.right:
+        return Icons.arrow_forward_rounded;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,9 +67,7 @@ class BusWidget extends StatelessWidget {
               size: 18,
             ),
             Icon(
-              isHorizontal
-                  ? Icons.arrow_forward_rounded
-                  : Icons.arrow_downward_rounded,
+              _exitArrow(),
               color: Colors.white,
               size: 24,
             ),
