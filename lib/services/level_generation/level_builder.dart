@@ -2,12 +2,19 @@
 import '../../models/level.dart';
 import 'difficulty_config.dart';
 import 'layout_generator.dart';
+import 'level_difficulty_analyzer.dart';
 import 'level_validator.dart';
 import 'passenger_generator.dart';
 import 'seeded_random.dart';
 
 class LevelBuilder {
   LevelBuilder._();
+
+  /// Viimeksi luodun tason vaikeusanalyysin tulos.
+  ///
+  /// Tätä käytetään tällä hetkellä analysointiin ja testaukseen.
+  /// Se ei muuta tason luontia tai pelin sääntöjä.
+  static LevelDifficultyResult? lastDifficultyResult;
 
   static Level build(int levelNumber) {
     if (levelNumber < 1) {
@@ -17,6 +24,8 @@ class LevelBuilder {
         'Level number must be at least 1.',
       );
     }
+
+    lastDifficultyResult = null;
 
     final difficulty = difficultyForLevel(levelNumber);
 
@@ -50,6 +59,11 @@ class LevelBuilder {
       );
 
       if (!isValid) continue;
+
+      lastDifficultyResult = LevelDifficultyAnalyzer.analyze(
+        buses: generated.buses,
+        boardSize: difficulty.boardSize,
+      );
 
       return Level(
         number: levelNumber,
