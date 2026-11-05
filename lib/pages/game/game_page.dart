@@ -1,8 +1,11 @@
+
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../models/bus.dart';
+import '../../models/customer.dart';
 import '../../models/level.dart';
+import '../../services/game_service.dart';
 import '../../services/level_service.dart';
 import '../../widgets/customer_queues.dart';
 import '../../widgets/game_board.dart';
@@ -18,16 +21,44 @@ class GamePage extends StatefulWidget {
 class _GamePageState extends State<GamePage> {
   late Level _level;
 
+  late List<Bus> _buses;
+  late List<Customer> _queueA;
+  late List<Customer> _queueB;
+
+  late List<Bus?> _parkingSlots;
+
   final int _unlockedExtraSlots = 0;
+
+  bool _levelCompleted = false;
 
   @override
   void initState() {
     super.initState();
-    _level = LevelService.createLevel(1);
+
+    _loadLevel(1);
+  }
+
+  void _loadLevel(int levelNumber) {
+    _level = LevelService.createLevel(levelNumber);
+
+    _buses = List<Bus>.from(_level.buses);
+    _queueA = List<Customer>.from(_level.queueA);
+    _queueB = List<Customer>.from(_level.queueB);
+
+    _parkingSlots = List<Bus?>.filled(
+      GameService.parkingSlots + _unlockedExtraSlots,
+      null,
+    );
+
+    _levelCompleted = false;
   }
 
   @override
   Widget build(BuildContext context) {
+    final parkedBuses = _parkingSlots
+        .whereType<Bus>()
+        .toList();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -38,10 +69,11 @@ class _GamePageState extends State<GamePage> {
               _buildHeader(),
               _buildLevelInfo(),
               CustomerQueues(
-                queueA: _level.queueA,
-                queueB: _level.queueB,
+                queueA: _queueA,
+                queueB: _queueB,
               ),
               ParkingArea(
+                parkedBuses: parkedBuses,
                 unlockedExtraSlots: _unlockedExtraSlots,
                 onUnlockSlot: _showAdMessage,
               ),
@@ -122,7 +154,7 @@ class _GamePageState extends State<GamePage> {
           ),
           const SizedBox(width: 7),
           Text(
-            '${_level.totalCustomers} PASSENGERS',
+            '${_queueA.length + _queueB.length} PASSENGERS LEFT',
             style: const TextStyle(
               color: AppColors.secondaryText,
               fontSize: 12,
@@ -131,7 +163,7 @@ class _GamePageState extends State<GamePage> {
           ),
           const Spacer(),
           Text(
-            '${_level.totalBuses} BUSES',
+            '${_buses.length} BUSES LEFT',
             style: const TextStyle(
               color: AppColors.secondaryText,
               fontSize: 12,
@@ -169,7 +201,7 @@ class _GamePageState extends State<GamePage> {
           ),
           GameBoard(
             boardSize: _level.boardSize,
-            buses: _level.buses,
+            buses: _buses,
             onBusTap: _onBusTap,
           ),
         ],
@@ -210,24 +242,145 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _onBusTap(Bus bus) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Bus ${bus.id} selected.',
-        ),
-        duration: const Duration(seconds: 2),
-      ),
+    if (_levelCompleted) {
+      return;
+    }
+
+    final busIndex = _buses.indexWhere(
+      (item) => item.id == bus.id,
+    );
+
+    if (busIndex == -1) {
+      return;
+    }
+
+    final freeSlot = GameService.findFreeParkingSlot(
+      _parkingSlots,
+    );
+
+    if (freeSlot == -1) {
+      _showMessage('Parking is full!');
+      return;
+    }
+
+    final otherBuses = _buses
+        .where((item) => item.id != bus.id)
+        .toList();
+
+    final canExit = GameService.canBusExit(
+      bus: bus,
+      otherBuses: otherBuses,
+      boardSize: _level.boardSize,
+    );
+
+    if (!canExit) {
+      _showMessage('The bus exit is blocked!');
+      return;
+    }
+
+    setState(() {
+      _buses.removeAt(busIndex);
+
+      _parkingSlots[freeSlot] = bus;
+
+      _processBoarding();
+    });
+
+    _checkLevelCompletion();
+  }
+
+  void _processBoarding() {
+    final result = GameService.processBoarding(
+      parkingSlots: _parkingSlots,
+      queueA: _queueA,
+      queueB: _queueB,
+    );
+
+    _parkingSlots = result.parkingSlots;
+    _queueA = result.queueA;
+    _queueB = result.queueB;
+  }
+
+  void _checkLevelCompletion() {
+    final completed = GameService.isLevelComplete(
+      remainingBuses: _buses,
+      parkingSlots: _parkingSlots,
+      queueA: _queueA,
+      queueB: _queueB,
+    );
+
+    if (!completed || _levelCompleted) {
+      return;
+    }
+
+    _levelCompleted = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      _showLevelCompletedDialog();
+    });
+  }
+
+  void _showLevelCompletedDialog() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.card,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'LEVEL COMPLETED!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.gold,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            'Great job! All buses and passengers have been cleared.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.primaryText,
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+
+                setState(() {
+                  _loadLevel(_level.number + 1);
+                });
+              },
+              child: const Text('NEXT LEVEL'),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  void _showAdMessage(int slotNumber) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Slot $slotNumber: rewarded ad integration will be added later.',
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 2),
         ),
-        duration: const Duration(seconds: 2),
-      ),
+      );
+  }
+
+  void _showAdMessage(int slotNumber) {
+    _showMessage(
+      'Slot $slotNumber: rewarded ad integration will be added later.',
     );
   }
 }
