@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../models/bus.dart';
 import '../../models/level.dart';
 import '../../services/level_service.dart';
 import '../../widgets/customer_queues.dart';
@@ -22,7 +23,6 @@ class _GamePageState extends State<GamePage> {
   @override
   void initState() {
     super.initState();
-
     _level = LevelService.createLevel(1);
   }
 
@@ -209,13 +209,13 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
-  void _onBusTap(dynamic bus) {
+  void _onBusTap(Bus bus) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
-          'Bus movement will be added next.',
+          'Bus ${bus.id} selected.',
         ),
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
