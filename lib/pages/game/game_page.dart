@@ -18,7 +18,7 @@ class GamePage extends StatefulWidget {
 class _GamePageState extends State<GamePage> {
   late Level _level;
 
-  int _unlockedExtraSlots = 0;
+  final int _unlockedExtraSlots = 0;
 
   @override
   void initState() {
