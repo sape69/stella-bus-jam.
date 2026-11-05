@@ -74,9 +74,11 @@ class LevelValidator {
     List<Customer> queueB,
   ) {
     for (var i = 0; i < parking.length; i++) {
-      var bus = parking[i];
+      final parkedBus = parking[i];
 
-      if (bus == null) continue;
+      if (parkedBus == null) continue;
+
+      var bus = parkedBus;
 
       while (!bus.isFull) {
         if (queueA.isNotEmpty &&
