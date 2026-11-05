@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/constants/app_colors.dart';
 import '../models/bus.dart';
 
 class BusWidget extends StatelessWidget {
@@ -48,7 +47,7 @@ class BusWidget extends StatelessWidget {
               isHorizontal ? Axis.horizontal : Axis.vertical,
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            Icon(
+            const Icon(
               Icons.person,
               color: Colors.white,
               size: 18,
