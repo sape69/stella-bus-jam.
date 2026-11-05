@@ -1,7 +1,20 @@
+
 name: Stella Bus Jam Flutter Tests
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'pubspec.yaml'
+      - 'analysis_options.yaml'
+      - '.github/workflows/flutter-tests.yml'
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -22,11 +35,11 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Create Android project files
-        run: flutter create . --platforms=android --project-name stella_bus_jam
-
       - name: Get dependencies
         run: flutter pub get
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed .
 
       - name: Flutter analyze
         run: flutter analyze
