@@ -34,7 +34,6 @@ class _GamePageState extends State<GamePage> {
   @override
   void initState() {
     super.initState();
-
     _loadLevel(1);
   }
 
@@ -55,10 +54,6 @@ class _GamePageState extends State<GamePage> {
 
   @override
   Widget build(BuildContext context) {
-    final parkedBuses = _parkingSlots
-        .whereType<Bus>()
-        .toList();
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -73,7 +68,7 @@ class _GamePageState extends State<GamePage> {
                 queueB: _queueB,
               ),
               ParkingArea(
-                parkedBuses: parkedBuses,
+                parkingSlots: _parkingSlots,
                 unlockedExtraSlots: _unlockedExtraSlots,
                 onUnlockSlot: _showAdMessage,
               ),
@@ -280,9 +275,7 @@ class _GamePageState extends State<GamePage> {
 
     setState(() {
       _buses.removeAt(busIndex);
-
       _parkingSlots[freeSlot] = bus;
-
       _processBoarding();
     });
 
