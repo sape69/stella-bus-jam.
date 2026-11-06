@@ -1,3 +1,4 @@
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import '../../services/level_service.dart';
 import '../../services/progress_service.dart';
 import '../../widgets/customer_queues.dart';
 import '../../widgets/game_board.dart';
+import '../../widgets/game_dialogs.dart';
 import '../../widgets/game_header.dart';
 import '../../widgets/parking_area.dart';
 import '../../widgets/passenger_animation.dart';
@@ -116,51 +118,7 @@ class _GamePageState extends State<GamePage>
       return;
     }
 
-    final shouldExit = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: AppColors.card,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'EXIT TO HOME?',
-            style: TextStyle(
-              color: AppColors.gold,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: const Text(
-            'Are you sure you want to leave this level? '
-            'Your current progress in this level will be lost.',
-            style: TextStyle(
-              color: AppColors.primaryText,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text(
-                'CANCEL',
-                style: TextStyle(
-                  color: AppColors.secondaryText,
-                ),
-              ),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              icon: const Icon(Icons.home_rounded),
-              label: const Text('GO HOME'),
-            ),
-          ],
-        );
-      },
-    );
+    final shouldExit = await GameDialogs.confirmExit(context);
 
     if (shouldExit == true && mounted) {
       Navigator.of(context).popUntil((route) => route.isFirst);
@@ -192,51 +150,7 @@ class _GamePageState extends State<GamePage>
       return;
     }
 
-    final shouldRestart = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: AppColors.card,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'RESTART LEVEL?',
-            style: TextStyle(
-              color: AppColors.gold,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: const Text(
-            'Are you sure you want to start this level again? '
-            'Your current progress in this level will be lost.',
-            style: TextStyle(
-              color: AppColors.primaryText,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text(
-                'CANCEL',
-                style: TextStyle(
-                  color: AppColors.secondaryText,
-                ),
-              ),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('RESTART'),
-            ),
-          ],
-        );
-      },
-    );
+    final shouldRestart = await GameDialogs.confirmRestart(context);
 
     if (shouldRestart == true && mounted) {
       _restartLevel();
@@ -660,90 +574,19 @@ class _GamePageState extends State<GamePage>
     }
 
     _savingCompletion = false;
-    _showLevelCompletedDialog();
-  }
 
-  Widget _buildEarnedStars() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(
-        3,
-        (index) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5),
-          child: Icon(
-            Icons.star_rounded,
-            size: 38,
-            color: index < _earnedStars
-                ? AppColors.gold
-                : AppColors.secondaryText.withValues(alpha: 0.3),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showLevelCompletedDialog() {
-    showDialog<void>(
+    GameDialogs.showLevelCompleted(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: AppColors.card,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'LEVEL COMPLETED!',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.gold,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildEarnedStars(),
-              const SizedBox(height: 12),
-              Text(
-                'You earned $_earnedStars out of 3 stars!',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppColors.primaryText,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Mistakes: $_mistakes',
-                style: const TextStyle(
-                  color: AppColors.secondaryText,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Great job! All buses and passengers have been cleared.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.primaryText,
-                ),
-              ),
-            ],
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
+      stars: _earnedStars,
+      mistakes: _mistakes,
+      onNextLevel: () {
+        if (!mounted) {
+          return;
+        }
 
-                setState(() {
-                  _loadLevel(_level.number + 1);
-                });
-              },
-              child: const Text('NEXT LEVEL'),
-            ),
-          ],
-        );
+        setState(() {
+          _loadLevel(_level.number + 1);
+        });
       },
     );
   }
