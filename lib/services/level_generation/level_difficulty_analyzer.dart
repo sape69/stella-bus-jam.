@@ -1,5 +1,6 @@
 
 import '../../models/bus.dart';
+import '../../models/customer.dart';
 import '../game_service.dart';
 
 enum LevelDifficultyRating {
@@ -14,6 +15,9 @@ class LevelDifficultyResult {
   final int initiallyAvailableBuses;
   final int blockedBuses;
   final int totalBuses;
+  final int peakParkingOccupancy;
+  final int waitingBusSteps;
+  final int queueBlockedSteps;
   final LevelDifficultyRating rating;
 
   const LevelDifficultyResult({
@@ -21,6 +25,9 @@ class LevelDifficultyResult {
     required this.initiallyAvailableBuses,
     required this.blockedBuses,
     required this.totalBuses,
+    required this.peakParkingOccupancy,
+    required this.waitingBusSteps,
+    required this.queueBlockedSteps,
     required this.rating,
   });
 
@@ -44,6 +51,9 @@ class LevelDifficultyAnalyzer {
   static LevelDifficultyResult analyze({
     required List<Bus> buses,
     required int boardSize,
+    List<int>? exitOrder,
+    List<Customer> queueA = const [],
+    List<Customer> queueB = const [],
   }) {
     if (boardSize < 1) {
       throw ArgumentError.value(
@@ -53,77 +63,221 @@ class LevelDifficultyAnalyzer {
       );
     }
 
+    if (exitOrder != null) {
+      if (exitOrder.length != buses.length) {
+        throw ArgumentError.value(
+          exitOrder,
+          'exitOrder',
+          'Exit order must contain every bus exactly once.',
+        );
+      }
+
+      final seenIndexes = <int>{};
+
+      for (final index in exitOrder) {
+        if (index < 0 ||
+            index >= buses.length ||
+            !seenIndexes.add(index)) {
+          throw ArgumentError.value(
+            exitOrder,
+            'exitOrder',
+            'Exit order contains an invalid or duplicate bus index.',
+          );
+        }
+      }
+    }
+
     if (buses.isEmpty) {
       return const LevelDifficultyResult(
         score: 0,
         initiallyAvailableBuses: 0,
         blockedBuses: 0,
         totalBuses: 0,
+        peakParkingOccupancy: 0,
+        waitingBusSteps: 0,
+        queueBlockedSteps: 0,
         rating: LevelDifficultyRating.easy,
       );
     }
 
-    final initiallyAvailable = <Bus>[];
-
-    for (final bus in buses) {
+    final initiallyAvailableCount = buses.where((bus) {
       final otherBuses = buses
           .where((other) => other.id != bus.id)
           .toList();
 
-      if (GameService.canBusExit(
+      return GameService.canBusExit(
         bus: bus,
         otherBuses: otherBuses,
         boardSize: boardSize,
-      )) {
-        initiallyAvailable.add(bus);
-      }
-    }
+      );
+    }).length;
 
-    final availableCount = initiallyAvailable.length;
-    final blockedCount = buses.length - availableCount;
+    final blockedCount = buses.length - initiallyAvailableCount;
+
+    final simulation = exitOrder == null
+        ? const _BoardingSimulation(
+            peakParkingOccupancy: 0,
+            waitingBusSteps: 0,
+            queueBlockedSteps: 0,
+          )
+        : _simulateBoarding(
+            buses: buses,
+            boardSize: boardSize,
+            exitOrder: exitOrder,
+            queueA: queueA,
+            queueB: queueB,
+          );
 
     final score = _calculateScore(
       totalBuses: buses.length,
-      availableBuses: availableCount,
+      initiallyAvailableBuses: initiallyAvailableCount,
       blockedBuses: blockedCount,
+      peakParkingOccupancy: simulation.peakParkingOccupancy,
+      waitingBusSteps: simulation.waitingBusSteps,
+      queueBlockedSteps: simulation.queueBlockedSteps,
     );
 
     return LevelDifficultyResult(
       score: score,
-      initiallyAvailableBuses: availableCount,
+      initiallyAvailableBuses: initiallyAvailableCount,
       blockedBuses: blockedCount,
       totalBuses: buses.length,
+      peakParkingOccupancy: simulation.peakParkingOccupancy,
+      waitingBusSteps: simulation.waitingBusSteps,
+      queueBlockedSteps: simulation.queueBlockedSteps,
       rating: _ratingForScore(score),
+    );
+  }
+
+  static _BoardingSimulation _simulateBoarding({
+    required List<Bus> buses,
+    required int boardSize,
+    required List<int> exitOrder,
+    required List<Customer> queueA,
+    required List<Customer> queueB,
+  }) {
+    final remainingBuses = List<Bus>.from(buses);
+    var parking = List<Bus?>.filled(
+      GameService.parkingSlots,
+      null,
+    );
+    var remainingA = List<Customer>.from(queueA);
+    var remainingB = List<Customer>.from(queueB);
+
+    var peakParkingOccupancy = 0;
+    var waitingBusSteps = 0;
+    var queueBlockedSteps = 0;
+
+    for (final busIndex in exitOrder) {
+      final bus = buses[busIndex];
+
+      final canExit = GameService.canBusExit(
+        bus: bus,
+        otherBuses: remainingBuses,
+        boardSize: boardSize,
+      );
+
+      if (!canExit) {
+        throw StateError(
+          'Difficulty analysis received an invalid exit order.',
+        );
+      }
+
+      final freeSlot = GameService.findFreeParkingSlot(parking);
+
+      if (freeSlot == -1) {
+        throw StateError(
+          'Difficulty analysis exceeded available parking slots.',
+        );
+      }
+
+      parking[freeSlot] = bus;
+      remainingBuses.removeWhere(
+        (remaining) => remaining.id == bus.id,
+      );
+
+      final occupiedBeforeBoarding =
+          parking.where((parkedBus) => parkedBus != null).length;
+
+      if (occupiedBeforeBoarding > peakParkingOccupancy) {
+        peakParkingOccupancy = occupiedBeforeBoarding;
+      }
+
+      final result = GameService.processBoarding(
+        parkingSlots: parking,
+        queueA: remainingA,
+        queueB: remainingB,
+      );
+
+      parking = result.parkingSlots;
+      remainingA = result.queueA;
+      remainingB = result.queueB;
+
+      final waitingBuses =
+          parking.where((parkedBus) => parkedBus != null).toList();
+
+      waitingBusSteps += waitingBuses.length;
+
+      if (waitingBuses.isNotEmpty) {
+        final hasMatchingQueueHead = waitingBuses.any((parkedBus) {
+          if (parkedBus == null) return false;
+
+          final matchesA = remainingA.isNotEmpty &&
+              remainingA.first.color == parkedBus.color;
+
+          final matchesB = remainingB.isNotEmpty &&
+              remainingB.first.color == parkedBus.color;
+
+          return matchesA || matchesB;
+        });
+
+        if (!hasMatchingQueueHead) {
+          queueBlockedSteps++;
+        }
+      }
+    }
+
+    return _BoardingSimulation(
+      peakParkingOccupancy: peakParkingOccupancy,
+      waitingBusSteps: waitingBusSteps,
+      queueBlockedSteps: queueBlockedSteps,
     );
   }
 
   static int _calculateScore({
     required int totalBuses,
-    required int availableBuses,
+    required int initiallyAvailableBuses,
     required int blockedBuses,
+    required int peakParkingOccupancy,
+    required int waitingBusSteps,
+    required int queueBlockedSteps,
   }) {
-    if (totalBuses == 0) {
-      return 0;
-    }
-
-    var score = 0;
+    if (totalBuses == 0) return 0;
 
     final blockedRatio = blockedBuses / totalBuses;
+    final parkingRatio =
+        peakParkingOccupancy / GameService.parkingSlots;
+    final waitingRatio = waitingBusSteps / (totalBuses * 2);
+    final queueBlockedRatio = queueBlockedSteps / totalBuses;
 
-    score += (blockedRatio * 60).round();
+    var score = (blockedRatio * 40).round();
 
-    if (availableBuses <= 1) {
-      score += 30;
-    } else if (availableBuses == 2) {
-      score += 20;
-    } else if (availableBuses == 3) {
+    score += (parkingRatio * 20).round();
+
+    score += (
+      waitingRatio.clamp(0.0, 1.0) * 25
+    ).round();
+
+    score += (
+      queueBlockedRatio.clamp(0.0, 1.0) * 15
+    ).round();
+
+    if (initiallyAvailableBuses <= 1) {
       score += 10;
-    }
-
-    if (totalBuses >= 18) {
-      score += 10;
-    } else if (totalBuses >= 12) {
-      score += 5;
+    } else if (initiallyAvailableBuses == 2) {
+      score += 6;
+    } else if (initiallyAvailableBuses == 3) {
+      score += 3;
     }
 
     return score.clamp(0, 100).toInt();
@@ -144,4 +298,16 @@ class LevelDifficultyAnalyzer {
 
     return LevelDifficultyRating.expert;
   }
+}
+
+class _BoardingSimulation {
+  final int peakParkingOccupancy;
+  final int waitingBusSteps;
+  final int queueBlockedSteps;
+
+  const _BoardingSimulation({
+    required this.peakParkingOccupancy,
+    required this.waitingBusSteps,
+    required this.queueBlockedSteps,
+  });
 }
