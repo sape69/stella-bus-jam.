@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
@@ -9,12 +8,17 @@ class GameHeader extends StatelessWidget {
   final int busesLeft;
   final int mistakes;
 
+  final VoidCallback onBack;
+  final VoidCallback onRestart;
+
   const GameHeader({
     super.key,
     required this.levelNumber,
     required this.passengersLeft,
     required this.busesLeft,
     required this.mistakes,
+    required this.onBack,
+    required this.onRestart,
   });
 
   @override
@@ -36,6 +40,15 @@ class GameHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
+          IconButton(
+            onPressed: onBack,
+            tooltip: 'Back to home',
+            icon: const Icon(
+              Icons.arrow_back_rounded,
+              color: AppColors.purple,
+              size: 27,
+            ),
+          ),
           const Icon(
             Icons.pets,
             color: AppColors.pink,
@@ -52,6 +65,15 @@ class GameHeader extends StatelessWidget {
                 letterSpacing: 1,
               ),
               overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            onPressed: onRestart,
+            tooltip: 'Restart level',
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: AppColors.pink,
+              size: 27,
             ),
           ),
           _buildLevelBadge(),
