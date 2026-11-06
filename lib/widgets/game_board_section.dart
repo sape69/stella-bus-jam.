@@ -10,6 +10,7 @@ class GameBoardSection extends StatelessWidget {
   final List<Bus> buses;
   final ValueChanged<Bus> onBusTap;
   final bool Function(Bus) canBusMove;
+  final Map<String, GlobalKey>? busAnchorKeys;
 
   const GameBoardSection({
     super.key,
@@ -17,6 +18,7 @@ class GameBoardSection extends StatelessWidget {
     required this.buses,
     required this.onBusTap,
     required this.canBusMove,
+    this.busAnchorKeys,
   });
 
   @override
@@ -49,6 +51,7 @@ class GameBoardSection extends StatelessWidget {
             buses: buses,
             onBusTap: onBusTap,
             canBusMove: canBusMove,
+            busAnchorKeys: busAnchorKeys,
           ),
         ],
       ),
