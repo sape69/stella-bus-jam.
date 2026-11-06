@@ -10,8 +10,15 @@ import 'seeded_random.dart';
 class LevelBuilder {
   LevelBuilder._();
 
-  /// Viimeksi luodun tason vaikeusanalyysin tulos.
+  /// Viimeksi valitun kentän vaikeusanalyysin tulos.
   static LevelDifficultyResult? lastDifficultyResult;
+
+  /// Kuinka monta vaihtoehtoa generaattori enintään kokeilee.
+  static const int maxGenerationAttempts = 50;
+
+  /// Kuinka lähellä tavoitepisteitä tuloksen pitää olla,
+  /// jotta lisäyrityksiä ei enää tarvita.
+  static const int acceptableDifficultyDifference = 3;
 
   static Level build(int levelNumber) {
     if (levelNumber < 1) {
@@ -25,8 +32,15 @@ class LevelBuilder {
     lastDifficultyResult = null;
 
     final difficulty = difficultyForLevel(levelNumber);
+    final targetScore = difficulty.targetDifficultyScore;
 
-    for (var attempt = 0; attempt < 50; attempt++) {
+    Level? bestLevel;
+    LevelDifficultyResult? bestResult;
+    var bestDifference = 101;
+
+    for (var attempt = 0;
+        attempt < maxGenerationAttempts;
+        attempt++) {
       final seed = (
         levelNumber * 7919 +
         104729 +
@@ -40,7 +54,9 @@ class LevelBuilder {
         random: random,
       );
 
-      if (layout == null) continue;
+      if (layout == null) {
+        continue;
+      }
 
       final generated = PassengerGenerator.generate(
         layout: layout,
@@ -55,9 +71,11 @@ class LevelBuilder {
         queueB: generated.queueB,
       );
 
-      if (!isValid) continue;
+      if (!isValid) {
+        continue;
+      }
 
-      lastDifficultyResult = LevelDifficultyAnalyzer.analyze(
+      final difficultyResult = LevelDifficultyAnalyzer.analyze(
         buses: generated.buses,
         boardSize: difficulty.boardSize,
         exitOrder: layout.exitOrder,
@@ -65,17 +83,35 @@ class LevelBuilder {
         queueB: generated.queueB,
       );
 
-      return Level(
-        number: levelNumber,
-        boardSize: difficulty.boardSize,
-        buses: generated.buses,
-        queueA: generated.queueA,
-        queueB: generated.queueB,
+      final difference =
+          (difficultyResult.score - targetScore).abs();
+
+      if (difference < bestDifference) {
+        bestDifference = difference;
+        bestResult = difficultyResult;
+
+        bestLevel = Level(
+          number: levelNumber,
+          boardSize: difficulty.boardSize,
+          buses: generated.buses,
+          queueA: generated.queueA,
+          queueB: generated.queueB,
+        );
+      }
+
+      if (difference <= acceptableDifficultyDifference) {
+        break;
+      }
+    }
+
+    if (bestLevel == null || bestResult == null) {
+      throw StateError(
+        'Could not generate a playable level: $levelNumber',
       );
     }
 
-    throw StateError(
-      'Could not generate a playable level: $levelNumber',
-    );
+    lastDifficultyResult = bestResult;
+
+    return bestLevel;
   }
 }
