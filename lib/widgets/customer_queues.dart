@@ -1,3 +1,4 @@
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -8,11 +9,15 @@ import '../models/customer.dart';
 class CustomerQueues extends StatefulWidget {
   final List<Customer> queueA;
   final List<Customer> queueB;
+  final GlobalKey? queueAFirstCustomerKey;
+  final GlobalKey? queueBFirstCustomerKey;
 
   const CustomerQueues({
     super.key,
     required this.queueA,
     required this.queueB,
+    this.queueAFirstCustomerKey,
+    this.queueBFirstCustomerKey,
   });
 
   @override
@@ -116,9 +121,17 @@ class _CustomerQueuesState extends State<CustomerQueues>
             ],
           ),
           const SizedBox(height: 16),
-          _buildQueueRow('A', widget.queueA),
+          _buildQueueRow(
+            'A',
+            widget.queueA,
+            widget.queueAFirstCustomerKey,
+          ),
           const SizedBox(height: 12),
-          _buildQueueRow('B', widget.queueB),
+          _buildQueueRow(
+            'B',
+            widget.queueB,
+            widget.queueBFirstCustomerKey,
+          ),
         ],
       ),
     );
@@ -127,6 +140,7 @@ class _CustomerQueuesState extends State<CustomerQueues>
   Widget _buildQueueRow(
     String label,
     List<Customer> customers,
+    GlobalKey? firstCustomerKey,
   ) {
     final Color queueColor =
         label == 'A' ? AppColors.purple : AppColors.pink;
@@ -175,10 +189,19 @@ class _CustomerQueuesState extends State<CustomerQueues>
               separatorBuilder: (_, __) =>
                   const SizedBox(width: 7),
               itemBuilder: (context, index) {
-                return _buildCustomer(
+                final customerWidget = _buildCustomer(
                   customers[index],
                   index,
                 );
+
+                if (index == 0 && firstCustomerKey != null) {
+                  return KeyedSubtree(
+                    key: firstCustomerKey,
+                    child: customerWidget,
+                  );
+                }
+
+                return customerWidget;
               },
             ),
           ),
