@@ -1,3 +1,4 @@
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import '../../models/level.dart';
 import '../../services/game_completion_service.dart';
 import '../../services/game_service.dart';
 import '../../services/level_service.dart';
+import '../../services/passenger_boarding_service.dart';
 import '../../widgets/customer_queues.dart';
 import '../../widgets/game_board_section.dart';
 import '../../widgets/game_bottom_info.dart';
@@ -380,76 +382,46 @@ class _GamePageState extends State<GamePage>
     _checkLevelCompletion();
   }
 
-  /// Animoi jokaisen matkustajan jonosta pysäköityyn bussiin.
-  /// Matkustaja poistetaan jonosta vasta animaation päätyttyä.
+  /// Siirtää matkustajien nousun käsittelyn palvelulle.
   Future<void> _processBoardingAnimated() async {
-    final actions = GameService.createBoardingPlan(
+    await PassengerBoardingService.processBoarding(
       parkingSlots: _parkingSlots,
       queueA: _queueA,
       queueB: _queueB,
+      isMounted: () => mounted,
+      animatePassenger: _animatePassenger,
+      onPassengerBoarded: (action) {
+        final slotIndex = action.parkingSlotIndex;
+
+        final queue = action.queue == BoardingQueue.a
+            ? _queueA
+            : _queueB;
+
+        if (slotIndex < 0 ||
+            slotIndex >= _parkingSlots.length ||
+            queue.isEmpty ||
+            queue.first.id != action.customer.id) {
+          return;
+        }
+
+        final currentBus = _parkingSlots[slotIndex];
+
+        if (currentBus == null || currentBus.isFull) {
+          return;
+        }
+
+        setState(() {
+          queue.removeAt(0);
+
+          final updatedBus = currentBus.copyWith(
+            passengers: currentBus.passengers + 1,
+          );
+
+          _parkingSlots[slotIndex] =
+              updatedBus.isFull ? null : updatedBus;
+        });
+      },
     );
-
-    for (final action in actions) {
-      if (!mounted) {
-        return;
-      }
-
-      final slotIndex = action.parkingSlotIndex;
-
-      if (slotIndex < 0 ||
-          slotIndex >= _parkingSlots.length) {
-        continue;
-      }
-
-      final bus = _parkingSlots[slotIndex];
-
-      if (bus == null || bus.isFull) {
-        continue;
-      }
-
-      final queue = action.queue == BoardingQueue.a
-          ? _queueA
-          : _queueB;
-
-      if (queue.isEmpty ||
-          queue.first.id != action.customer.id) {
-        continue;
-      }
-
-      await _animatePassenger(action);
-
-      if (!mounted) {
-        return;
-      }
-
-      final currentBus = _parkingSlots[slotIndex];
-
-      final currentQueue = action.queue == BoardingQueue.a
-          ? _queueA
-          : _queueB;
-
-      if (currentBus == null ||
-          currentBus.isFull ||
-          currentQueue.isEmpty ||
-          currentQueue.first.id != action.customer.id) {
-        continue;
-      }
-
-      setState(() {
-        currentQueue.removeAt(0);
-
-        final updatedBus = currentBus.copyWith(
-          passengers: currentBus.passengers + 1,
-        );
-
-        _parkingSlots[slotIndex] =
-            updatedBus.isFull ? null : updatedBus;
-      });
-
-      await Future.delayed(
-        const Duration(milliseconds: 120),
-      );
-    }
   }
 
   void _registerMistake(String message) {
