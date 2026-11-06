@@ -1,10 +1,11 @@
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
 import '../models/customer.dart';
 
-class CustomerQueues extends StatelessWidget {
+class CustomerQueues extends StatefulWidget {
   final List<Customer> queueA;
   final List<Customer> queueB;
 
@@ -13,6 +14,30 @@ class CustomerQueues extends StatelessWidget {
     required this.queueA,
     required this.queueB,
   });
+
+  @override
+  State<CustomerQueues> createState() => _CustomerQueuesState();
+}
+
+class _CustomerQueuesState extends State<CustomerQueues>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +105,7 @@ class CustomerQueues extends StatelessWidget {
                 ),
               ),
               Text(
-                '${queueA.length + queueB.length} TOTAL',
+                '${widget.queueA.length + widget.queueB.length} TOTAL',
                 style: const TextStyle(
                   color: AppColors.gold,
                   fontSize: 11,
@@ -91,9 +116,9 @@ class CustomerQueues extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _buildQueueRow('A', queueA),
+          _buildQueueRow('A', widget.queueA),
           const SizedBox(height: 12),
-          _buildQueueRow('B', queueB),
+          _buildQueueRow('B', widget.queueB),
         ],
       ),
     );
@@ -150,7 +175,10 @@ class CustomerQueues extends StatelessWidget {
               separatorBuilder: (_, __) =>
                   const SizedBox(width: 7),
               itemBuilder: (context, index) {
-                return _buildCustomer(customers[index]);
+                return _buildCustomer(
+                  customers[index],
+                  index,
+                );
               },
             ),
           ),
@@ -185,35 +213,53 @@ class CustomerQueues extends StatelessWidget {
     );
   }
 
-  Widget _buildCustomer(Customer customer) {
-    return Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        color: customer.color,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.85),
-          width: 1.6,
+  Widget _buildCustomer(
+    Customer customer,
+    int index,
+  ) {
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        final phase =
+            (_animationController.value * 2 * math.pi) +
+                (index * 0.55);
+
+        final verticalOffset = math.sin(phase) * 1.5;
+
+        return Transform.translate(
+          offset: Offset(0, verticalOffset),
+          child: child,
+        );
+      },
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: customer.color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.85),
+            width: 1.6,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: customer.color.withValues(alpha: 0.30),
+              blurRadius: 7,
+              offset: const Offset(0, 2),
+            ),
+            const BoxShadow(
+              color: Colors.black26,
+              blurRadius: 3,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: customer.color.withValues(alpha: 0.30),
-            blurRadius: 7,
-            offset: const Offset(0, 2),
+        child: const Center(
+          child: Icon(
+            Icons.person_rounded,
+            color: Colors.white,
+            size: 21,
           ),
-          const BoxShadow(
-            color: Colors.black26,
-            blurRadius: 3,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: const Center(
-        child: Icon(
-          Icons.person_rounded,
-          color: Colors.white,
-          size: 21,
         ),
       ),
     );
