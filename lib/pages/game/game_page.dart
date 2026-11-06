@@ -1,3 +1,6 @@
+
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
@@ -24,6 +27,9 @@ class GamePage extends StatefulWidget {
 }
 
 class _GamePageState extends State<GamePage> {
+  static const Duration _boardingDelay =
+      Duration(milliseconds: 450);
+
   late Level _level;
 
   late List<Bus> _buses;
@@ -35,6 +41,7 @@ class _GamePageState extends State<GamePage> {
 
   bool _levelCompleted = false;
   bool _savingCompletion = false;
+  bool _boardingInProgress = false;
 
   int _mistakes = 0;
   int _earnedStars = 0;
@@ -59,11 +66,17 @@ class _GamePageState extends State<GamePage> {
 
     _levelCompleted = false;
     _savingCompletion = false;
+    _boardingInProgress = false;
     _mistakes = 0;
     _earnedStars = 0;
   }
 
   Future<void> _confirmExitToHome() async {
+    if (_boardingInProgress) {
+      _showMessage('Please wait until passengers have boarded.');
+      return;
+    }
+
     final shouldExit = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -116,6 +129,10 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _restartLevel() {
+    if (_boardingInProgress) {
+      return;
+    }
+
     setState(() {
       _loadLevel(_level.number);
     });
@@ -131,6 +148,11 @@ class _GamePageState extends State<GamePage> {
   }
 
   Future<void> _confirmRestart() async {
+    if (_boardingInProgress) {
+      _showMessage('Please wait until passengers have boarded.');
+      return;
+    }
+
     final shouldRestart = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -434,7 +456,7 @@ class _GamePageState extends State<GamePage> {
   }
 
   bool _canBusMove(Bus bus) {
-    if (_levelCompleted) {
+    if (_levelCompleted || _boardingInProgress) {
       return false;
     }
 
@@ -465,8 +487,8 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
-  void _onBusTap(Bus bus) {
-    if (_levelCompleted) {
+  Future<void> _onBusTap(Bus bus) async {
+    if (_levelCompleted || _boardingInProgress) {
       return;
     }
 
@@ -503,32 +525,87 @@ class _GamePageState extends State<GamePage> {
     }
 
     setState(() {
+      _boardingInProgress = true;
       _buses.removeAt(busIndex);
       _parkingSlots[freeSlot] = bus;
-      _processBoarding();
+    });
+
+    await _processBoardingAnimated();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _boardingInProgress = false;
     });
 
     _checkLevelCompletion();
   }
 
-  void _registerMistake(String message) {
-    setState(() {
-      _mistakes++;
-    });
-
-    _showMessage('$message Mistakes: $_mistakes');
-  }
-
-  void _processBoarding() {
-    final result = GameService.processBoarding(
+  /// Käsittelee matkustajat yksitellen.
+  ///
+  /// Nousujärjestys lasketaan GameService-luokassa.
+  /// Jokaisen nousun jälkeen päivitetään jono ja bussi.
+  Future<void> _processBoardingAnimated() async {
+    final actions = GameService.createBoardingPlan(
       parkingSlots: _parkingSlots,
       queueA: _queueA,
       queueB: _queueB,
     );
 
-    _parkingSlots = result.parkingSlots;
-    _queueA = result.queueA;
-    _queueB = result.queueB;
+    for (final action in actions) {
+      await Future.delayed(_boardingDelay);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        final slotIndex = action.parkingSlotIndex;
+
+        if (slotIndex < 0 ||
+            slotIndex >= _parkingSlots.length) {
+          return;
+        }
+
+        final bus = _parkingSlots[slotIndex];
+
+        if (bus == null || bus.isFull) {
+          return;
+        }
+
+        final queue = action.queue == BoardingQueue.a
+            ? _queueA
+            : _queueB;
+
+        if (queue.isEmpty ||
+            queue.first.id != action.customer.id) {
+          return;
+        }
+
+        queue.removeAt(0);
+
+        final updatedBus = bus.copyWith(
+          passengers: bus.passengers + 1,
+        );
+
+        _parkingSlots[slotIndex] =
+            updatedBus.isFull ? null : updatedBus;
+      });
+    }
+  }
+
+  void _registerMistake(String message) {
+    if (_boardingInProgress) {
+      return;
+    }
+
+    setState(() {
+      _mistakes++;
+    });
+
+    _showMessage('$message Mistakes: $_mistakes');
   }
 
   int _calculateStars() {
