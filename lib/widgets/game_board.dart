@@ -1,12 +1,10 @@
 
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
 import '../models/bus.dart';
 
-class GameBoard extends StatefulWidget {
+class GameBoard extends StatelessWidget {
   final int boardSize;
   final List<Bus> buses;
   final ValueChanged<Bus>? onBusTap;
@@ -24,16 +22,6 @@ class GameBoard extends StatefulWidget {
     this.busAnchorKeys,
   });
 
-  @override
-  State<GameBoard> createState() => _GameBoardState();
-}
-
-class _GameBoardState extends State<GameBoard> {
-  static const Duration _animationDuration =
-      Duration(milliseconds: 650);
-
-  String? _animatingBusId;
-
   IconData _exitArrow(Bus bus) {
     switch (bus.exitDirection) {
       case BusExitDirection.up:
@@ -47,36 +35,10 @@ class _GameBoardState extends State<GameBoard> {
     }
   }
 
-  Future<void> _handleBusTap(Bus bus) async {
-    if (_animatingBusId != null) {
-      return;
-    }
-
-    if (widget.canBusMove != null &&
-        !widget.canBusMove!(bus)) {
-      widget.onBusTap?.call(bus);
-      return;
-    }
-
-    setState(() {
-      _animatingBusId = bus.id;
-    });
-
-    await Future.delayed(_animationDuration);
-
-    if (!mounted) {
-      return;
-    }
-
-    widget.onBusTap?.call(bus);
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _animatingBusId = null;
-    });
+  void _handleBusTap(Bus bus) {
+    // Always notify GamePage, including blocked buses.
+    // GamePage handles validation and displays the correct message.
+    onBusTap?.call(bus);
   }
 
   @override
@@ -96,13 +58,13 @@ class _GameBoardState extends State<GameBoard> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final cellSize =
-                constraints.maxWidth / widget.boardSize;
+                constraints.maxWidth / boardSize;
 
             return Stack(
               clipBehavior: Clip.none,
               children: [
                 _buildGrid(),
-                ...widget.buses.map(
+                ...buses.map(
                   (bus) => _buildBus(bus, cellSize),
                 ),
               ],
@@ -116,11 +78,11 @@ class _GameBoardState extends State<GameBoard> {
   Widget _buildGrid() {
     return Column(
       children: List.generate(
-        widget.boardSize,
+        boardSize,
         (row) => Expanded(
           child: Row(
             children: List.generate(
-              widget.boardSize,
+              boardSize,
               (column) => Expanded(
                 child: Container(
                   margin: const EdgeInsets.all(1),
@@ -149,42 +111,16 @@ class _GameBoardState extends State<GameBoard> {
         ? cellSize
         : cellSize * bus.length;
 
-    final isAnimating = _animatingBusId == bus.id;
+    final busAnchorKey = busAnchorKeys?[bus.id];
 
-    double left = bus.column * cellSize;
-    double top = bus.row * cellSize;
-
-    if (isAnimating) {
-      switch (bus.exitDirection) {
-        case BusExitDirection.right:
-          left = widget.boardSize * cellSize + cellSize;
-          break;
-        case BusExitDirection.left:
-          left = -width - cellSize;
-          break;
-        case BusExitDirection.down:
-          top = widget.boardSize * cellSize + cellSize;
-          break;
-        case BusExitDirection.up:
-          top = -height - cellSize;
-          break;
-      }
-    }
-
-    final busAnchorKey = widget.busAnchorKeys?[bus.id];
-
-    return AnimatedPositioned(
+    return Positioned(
       key: ValueKey(bus.id),
-      duration: _animationDuration,
-      curve: Curves.easeInCubic,
-      left: left,
-      top: top,
+      left: bus.column * cellSize,
+      top: bus.row * cellSize,
       width: width,
       height: height,
       child: GestureDetector(
-        onTap: isAnimating
-            ? null
-            : () => _handleBusTap(bus),
+        onTap: () => _handleBusTap(bus),
         child: KeyedSubtree(
           key: busAnchorKey,
           child: Container(
