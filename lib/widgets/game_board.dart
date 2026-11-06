@@ -1,20 +1,34 @@
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
 import '../models/bus.dart';
 
-class GameBoard extends StatelessWidget {
+class GameBoard extends StatefulWidget {
   final int boardSize;
   final List<Bus> buses;
   final ValueChanged<Bus>? onBusTap;
+  final bool Function(Bus)? canBusMove;
 
   const GameBoard({
     super.key,
     this.boardSize = 8,
     this.buses = const [],
     this.onBusTap,
+    this.canBusMove,
   });
+
+  @override
+  State<GameBoard> createState() => _GameBoardState();
+}
+
+class _GameBoardState extends State<GameBoard> {
+  static const Duration _animationDuration =
+      Duration(milliseconds: 650);
+
+  String? _animatingBusId;
 
   IconData _exitArrow(Bus bus) {
     switch (bus.exitDirection) {
@@ -27,6 +41,38 @@ class GameBoard extends StatelessWidget {
       case BusExitDirection.right:
         return Icons.arrow_forward_rounded;
     }
+  }
+
+  Future<void> _handleBusTap(Bus bus) async {
+    if (_animatingBusId != null) {
+      return;
+    }
+
+    if (widget.canBusMove != null &&
+        !widget.canBusMove!(bus)) {
+      widget.onBusTap?.call(bus);
+      return;
+    }
+
+    setState(() {
+      _animatingBusId = bus.id;
+    });
+
+    await Future.delayed(_animationDuration);
+
+    if (!mounted) {
+      return;
+    }
+
+    widget.onBusTap?.call(bus);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _animatingBusId = null;
+    });
   }
 
   @override
@@ -46,12 +92,13 @@ class GameBoard extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final cellSize =
-                constraints.maxWidth / boardSize;
+                constraints.maxWidth / widget.boardSize;
 
             return Stack(
+              clipBehavior: Clip.none,
               children: [
                 _buildGrid(),
-                ...buses.map(
+                ...widget.buses.map(
                   (bus) => _buildBus(bus, cellSize),
                 ),
               ],
@@ -65,11 +112,11 @@ class GameBoard extends StatelessWidget {
   Widget _buildGrid() {
     return Column(
       children: List.generate(
-        boardSize,
+        widget.boardSize,
         (row) => Expanded(
           child: Row(
             children: List.generate(
-              boardSize,
+              widget.boardSize,
               (column) => Expanded(
                 child: Container(
                   margin: const EdgeInsets.all(1),
@@ -98,23 +145,62 @@ class GameBoard extends StatelessWidget {
         ? cellSize
         : cellSize * bus.length;
 
-    return Positioned(
-      left: bus.column * cellSize,
-      top: bus.row * cellSize,
+    final isAnimating = _animatingBusId == bus.id;
+
+    double left = bus.column * cellSize;
+    double top = bus.row * cellSize;
+
+    if (isAnimating) {
+      switch (bus.exitDirection) {
+        case BusExitDirection.right:
+          left = widget.boardSize * cellSize + cellSize;
+          break;
+        case BusExitDirection.left:
+          left = -width - cellSize;
+          break;
+        case BusExitDirection.down:
+          top = widget.boardSize * cellSize + cellSize;
+          break;
+        case BusExitDirection.up:
+          top = -height - cellSize;
+          break;
+      }
+    }
+
+    return AnimatedPositioned(
+      key: ValueKey(bus.id),
+      duration: _animationDuration,
+      curve: Curves.easeInCubic,
+      left: left,
+      top: top,
       width: width,
       height: height,
       child: GestureDetector(
-        onTap: () => onBusTap?.call(bus),
+        onTap: isAnimating
+            ? null
+            : () => _handleBusTap(bus),
         child: Container(
           margin: const EdgeInsets.all(2),
           decoration: BoxDecoration(
-            color: bus.color,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                bus.color,
+                bus.color.withValues(alpha: 0.78),
+              ],
+            ),
             borderRadius: BorderRadius.circular(9),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.65),
+              color: Colors.white.withValues(alpha: 0.75),
               width: 1.5,
             ),
             boxShadow: [
+              BoxShadow(
+                color: bus.color.withValues(alpha: 0.28),
+                blurRadius: 9,
+                offset: const Offset(2, 3),
+              ),
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 5,
