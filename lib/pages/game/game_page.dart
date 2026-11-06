@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -13,6 +12,7 @@ import '../../services/level_service.dart';
 import '../../services/progress_service.dart';
 import '../../widgets/customer_queues.dart';
 import '../../widgets/game_board.dart';
+import '../../widgets/game_header.dart';
 import '../../widgets/parking_area.dart';
 
 class GamePage extends StatefulWidget {
@@ -258,9 +258,14 @@ class _GamePageState extends State<GamePage>
               padding: const EdgeInsets.only(bottom: 20),
               child: Column(
                 children: [
-                  _buildHeader(),
-                  _buildLevelInfo(),
-                  _buildStarProgress(),
+                  GameHeader(
+                    levelNumber: _level.number,
+                    passengersLeft: _queueA.length + _queueB.length,
+                    busesLeft: _buses.length,
+                    mistakes: _mistakes,
+                    onBack: _confirmExitToHome,
+                    onRestart: _confirmRestart,
+                  ),
                   CustomerQueues(
                     queueA: _queueA,
                     queueB: _queueB,
@@ -383,7 +388,6 @@ class _GamePageState extends State<GamePage>
       return;
     }
 
-    // Odotetaan, että bussin pysäköintipaikka on piirretty.
     await WidgetsBinding.instance.endOfFrame;
 
     if (!mounted) {
@@ -423,160 +427,6 @@ class _GamePageState extends State<GamePage>
     setState(() {
       _showMovingPassenger = false;
     });
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 14,
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: _confirmExitToHome,
-            tooltip: 'Back to home',
-            icon: const Icon(
-              Icons.arrow_back_rounded,
-              color: AppColors.purple,
-              size: 27,
-            ),
-          ),
-          const Icon(
-            Icons.pets,
-            color: AppColors.pink,
-            size: 30,
-          ),
-          const SizedBox(width: 8),
-          const Expanded(
-            child: Text(
-              'STELLA BUS JAM',
-              style: TextStyle(
-                color: AppColors.primaryText,
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          IconButton(
-            onPressed: _confirmRestart,
-            tooltip: 'Restart level',
-            icon: const Icon(
-              Icons.refresh_rounded,
-              color: AppColors.pink,
-              size: 27,
-            ),
-          ),
-          _buildLevelBadge(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLevelBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 13,
-        vertical: 8,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.purple,
-        ),
-      ),
-      child: Text(
-        'LEVEL ${_level.number}',
-        style: const TextStyle(
-          color: AppColors.gold,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLevelInfo() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 4,
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.people_alt_rounded,
-            color: AppColors.pink,
-            size: 19,
-          ),
-          const SizedBox(width: 7),
-          Text(
-            '${_queueA.length + _queueB.length} PASSENGERS LEFT',
-            style: const TextStyle(
-              color: AppColors.secondaryText,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            '${_buses.length} BUSES LEFT',
-            style: const TextStyle(
-              color: AppColors.secondaryText,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStarProgress() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 8,
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.star_rounded,
-            color: AppColors.gold,
-            size: 20,
-          ),
-          const SizedBox(width: 6),
-          const Text(
-            'MISTAKES:',
-            style: TextStyle(
-              color: AppColors.secondaryText,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            '$_mistakes',
-            style: const TextStyle(
-              color: AppColors.primaryText,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const Spacer(),
-          const Text(
-            '3 STARS POSSIBLE',
-            style: TextStyle(
-              color: AppColors.gold,
-              fontWeight: FontWeight.bold,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildBoardSection() {
@@ -776,8 +626,6 @@ class _GamePageState extends State<GamePage>
         return;
       }
 
-      // Varmistetaan vielä animaation jälkeen, että
-      // oikea matkustaja ja bussi ovat edelleen paikallaan.
       final currentBus = _parkingSlots[slotIndex];
 
       final currentQueue = action.queue == BoardingQueue.a
