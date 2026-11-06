@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
@@ -16,30 +17,82 @@ class CustomerQueues extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 10,
+      ),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: AppColors.boardBorder,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF211238),
+            Color(0xFF190E2D),
+          ],
         ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: AppColors.purple.withValues(alpha: 0.22),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.20),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+          BoxShadow(
+            color: AppColors.purple.withValues(alpha: 0.05),
+            blurRadius: 18,
+            spreadRadius: 1,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'PASSENGER QUEUES',
-            style: TextStyle(
-              color: AppColors.primaryText,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: AppColors.purple.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(
+                  Icons.groups_rounded,
+                  color: AppColors.purple,
+                  size: 19,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'PASSENGER QUEUES',
+                  style: TextStyle(
+                    color: AppColors.primaryText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ),
+              Text(
+                '${queueA.length + queueB.length} TOTAL',
+                style: const TextStyle(
+                  color: AppColors.gold,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           _buildQueueRow('A', queueA),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _buildQueueRow('B', queueB),
         ],
       ),
@@ -50,33 +103,52 @@ class CustomerQueues extends StatelessWidget {
     String label,
     List<Customer> customers,
   ) {
+    final Color queueColor =
+        label == 'A' ? AppColors.purple : AppColors.pink;
+
     return Row(
       children: [
         Container(
-          width: 28,
-          height: 28,
+          width: 34,
+          height: 34,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: AppColors.purple,
-            borderRadius: BorderRadius.circular(8),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                queueColor,
+                queueColor.withValues(alpha: 0.72),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(11),
+            boxShadow: [
+              BoxShadow(
+                color: queueColor.withValues(alpha: 0.22),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Text(
             label,
             style: const TextStyle(
               color: AppColors.background,
-              fontWeight: FontWeight.bold,
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: SizedBox(
-            height: 38,
+            height: 42,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
               itemCount: customers.length,
               separatorBuilder: (_, __) =>
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 7),
               itemBuilder: (context, index) {
                 return _buildCustomer(customers[index]);
               },
@@ -84,11 +156,29 @@ class CustomerQueues extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Text(
-          '${customers.length}',
-          style: const TextStyle(
-            color: AppColors.gold,
-            fontWeight: FontWeight.bold,
+        Container(
+          constraints: const BoxConstraints(
+            minWidth: 34,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 7,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.gold.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: AppColors.gold.withValues(alpha: 0.20),
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '${customers.length}',
+            style: const TextStyle(
+              color: AppColors.gold,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ),
       ],
@@ -97,26 +187,34 @@ class CustomerQueues extends StatelessWidget {
 
   Widget _buildCustomer(Customer customer) {
     return Container(
-      width: 30,
-      height: 30,
+      width: 34,
+      height: 34,
       decoration: BoxDecoration(
         color: customer.color,
         shape: BoxShape.circle,
         border: Border.all(
-          color: AppColors.primaryText.withValues(alpha: 0.7),
-          width: 1.5,
+          color: Colors.white.withValues(alpha: 0.85),
+          width: 1.6,
         ),
         boxShadow: [
           BoxShadow(
-            color: customer.color.withValues(alpha: 0.25),
-            blurRadius: 5,
+            color: customer.color.withValues(alpha: 0.30),
+            blurRadius: 7,
+            offset: const Offset(0, 2),
+          ),
+          const BoxShadow(
+            color: Colors.black26,
+            blurRadius: 3,
+            offset: Offset(0, 2),
           ),
         ],
       ),
-      child: const Icon(
-        Icons.person,
-        color: Colors.white,
-        size: 19,
+      child: const Center(
+        child: Icon(
+          Icons.person_rounded,
+          color: Colors.white,
+          size: 21,
+        ),
       ),
     );
   }
