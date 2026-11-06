@@ -11,9 +11,6 @@ class LevelBuilder {
   LevelBuilder._();
 
   /// Viimeksi luodun tason vaikeusanalyysin tulos.
-  ///
-  /// Tätä käytetään tällä hetkellä analysointiin ja testaukseen.
-  /// Se ei muuta tason luontia tai pelin sääntöjä.
   static LevelDifficultyResult? lastDifficultyResult;
 
   static Level build(int levelNumber) {
@@ -63,6 +60,9 @@ class LevelBuilder {
       lastDifficultyResult = LevelDifficultyAnalyzer.analyze(
         buses: generated.buses,
         boardSize: difficulty.boardSize,
+        exitOrder: layout.exitOrder,
+        queueA: generated.queueA,
+        queueB: generated.queueB,
       );
 
       return Level(
