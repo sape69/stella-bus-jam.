@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
@@ -395,6 +394,7 @@ class _GamePageState extends State<GamePage> {
             boardSize: _level.boardSize,
             buses: _buses,
             onBusTap: _onBusTap,
+            canBusMove: _canBusMove,
           ),
         ],
       ),
@@ -430,6 +430,38 @@ class _GamePageState extends State<GamePage> {
           ],
         ),
       ),
+    );
+  }
+
+  bool _canBusMove(Bus bus) {
+    if (_levelCompleted) {
+      return false;
+    }
+
+    final busExists = _buses.any(
+      (item) => item.id == bus.id,
+    );
+
+    if (!busExists) {
+      return false;
+    }
+
+    final freeSlot = GameService.findFreeParkingSlot(
+      _parkingSlots,
+    );
+
+    if (freeSlot == -1) {
+      return false;
+    }
+
+    final otherBuses = _buses
+        .where((item) => item.id != bus.id)
+        .toList();
+
+    return GameService.canBusExit(
+      bus: bus,
+      otherBuses: otherBuses,
+      boardSize: _level.boardSize,
     );
   }
 
