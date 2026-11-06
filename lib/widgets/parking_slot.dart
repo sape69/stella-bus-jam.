@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
@@ -70,12 +69,12 @@ class ParkingSlot extends StatelessWidget {
 
   Widget _buildUnlockedSlot() {
     if (bus != null) {
-      return KeyedSubtree(
-        key: busAnchorKey,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          KeyedSubtree(
+            key: busAnchorKey,
+            child: Container(
               width: 43,
               height: 43,
               decoration: BoxDecoration(
@@ -91,38 +90,47 @@ class ParkingSlot extends StatelessWidget {
                 size: 29,
               ),
             ),
-            const SizedBox(height: 5),
-            Text(
-              '${bus!.passengers}/${bus!.capacity}',
-              style: const TextStyle(
-                color: AppColors.primaryText,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            '${bus!.passengers}/${bus!.capacity}',
+            style: const TextStyle(
+              color: AppColors.primaryText,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
             ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Container(
-          width: 35,
-          height: 35,
-          decoration: BoxDecoration(
-            color: AppColors.purple.withValues(alpha: 0.12),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: AppColors.purple.withValues(alpha: 0.55),
-              width: 1.5,
+        KeyedSubtree(
+          key: busAnchorKey,
+          child: SizedBox(
+            width: 43,
+            height: 43,
+            child: Center(
+              child: Container(
+                width: 35,
+                height: 35,
+                decoration: BoxDecoration(
+                  color: AppColors.purple.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.purple.withValues(alpha: 0.55),
+                    width: 1.5,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: AppColors.purple,
+                  size: 25,
+                ),
+              ),
             ),
-          ),
-          child: const Icon(
-            Icons.add_rounded,
-            color: AppColors.purple,
-            size: 25,
           ),
         ),
         const SizedBox(height: 6),
