@@ -157,10 +157,12 @@ class LevelDifficultyAnalyzer {
     required List<Customer> queueB,
   }) {
     final remainingBuses = List<Bus>.from(buses);
+
     var parking = List<Bus?>.filled(
       GameService.parkingSlots,
       null,
     );
+
     var remainingA = List<Customer>.from(queueA);
     var remainingB = List<Customer>.from(queueB);
 
@@ -192,6 +194,7 @@ class LevelDifficultyAnalyzer {
       }
 
       parking[freeSlot] = bus;
+
       remainingBuses.removeWhere(
         (remaining) => remaining.id == bus.id,
       );
@@ -218,7 +221,10 @@ class LevelDifficultyAnalyzer {
 
       waitingBusSteps += waitingBuses.length;
 
-      if (waitingBuses.isNotEmpty) {
+      final hasQueuedCustomers =
+          remainingA.isNotEmpty || remainingB.isNotEmpty;
+
+      if (waitingBuses.isNotEmpty && hasQueuedCustomers) {
         final hasMatchingQueueHead = waitingBuses.any((parkedBus) {
           if (parkedBus == null) return false;
 
@@ -255,9 +261,12 @@ class LevelDifficultyAnalyzer {
     if (totalBuses == 0) return 0;
 
     final blockedRatio = blockedBuses / totalBuses;
+
     final parkingRatio =
         peakParkingOccupancy / GameService.parkingSlots;
+
     final waitingRatio = waitingBusSteps / (totalBuses * 2);
+
     final queueBlockedRatio = queueBlockedSteps / totalBuses;
 
     var score = (blockedRatio * 40).round();
