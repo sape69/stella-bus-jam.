@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -12,6 +11,7 @@ import '../../services/level_service.dart';
 import '../../services/progress_service.dart';
 import '../../widgets/customer_queues.dart';
 import '../../widgets/game_board_section.dart';
+import '../../widgets/game_bottom_info.dart';
 import '../../widgets/game_dialogs.dart';
 import '../../widgets/game_header.dart';
 import '../../widgets/parking_area.dart';
@@ -198,7 +198,7 @@ class _GamePageState extends State<GamePage>
                     onBusTap: _onBusTap,
                     canBusMove: _canBusMove,
                   ),
-                  _buildBottomInfo(),
+                  const GameBottomInfo(),
                 ],
               ),
             ),
@@ -290,38 +290,6 @@ class _GamePageState extends State<GamePage>
     setState(() {
       _showMovingPassenger = false;
     });
-  }
-
-  Widget _buildBottomInfo() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: const Row(
-          children: [
-            Icon(
-              Icons.lightbulb_outline,
-              color: AppColors.gold,
-            ),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Guide the buses out and collect the passengers!',
-                style: TextStyle(
-                  color: AppColors.secondaryText,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   bool _canBusMove(Bus bus) {
