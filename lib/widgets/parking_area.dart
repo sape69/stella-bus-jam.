@@ -9,12 +9,14 @@ class ParkingArea extends StatelessWidget {
   final List<Bus?> parkingSlots;
   final int unlockedExtraSlots;
   final ValueChanged<int>? onUnlockSlot;
+  final List<GlobalKey?>? busAnchorKeys;
 
   const ParkingArea({
     super.key,
     this.parkingSlots = const [],
     this.unlockedExtraSlots = 0,
     this.onUnlockSlot,
+    this.busAnchorKeys,
   });
 
   @override
@@ -54,10 +56,17 @@ class ParkingArea extends StatelessWidget {
                     ? parkingSlots[index]
                     : null;
 
+                final GlobalKey? busAnchorKey =
+                    busAnchorKeys != null &&
+                            index < busAnchorKeys!.length
+                        ? busAnchorKeys![index]
+                        : null;
+
                 return ParkingSlot(
                   slotNumber: slotNumber,
                   bus: bus,
                   isUnlocked: isUnlocked,
+                  busAnchorKey: busAnchorKey,
                   onUnlock: isUnlocked
                       ? null
                       : () => onUnlockSlot?.call(slotNumber),
