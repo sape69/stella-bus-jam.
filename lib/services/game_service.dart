@@ -147,14 +147,94 @@ class GameService {
     return updatedParking;
   }
 
-  /// Käsittelee pysäköityjen bussien matkustajat.
+  /// Luo matkustajien nousujärjestyksen muuttamatta pelitilaa.
   ///
-  /// Jonon A ensimmäinen matkustaja on aina etusijalla.
+  /// Jokainen BoardingAction kuvaa yhtä matkustajaa,
+  /// joka nousee tiettyyn pysäköityyn bussiin.
+  ///
+  /// Jonon A ensimmäinen matkustaja on etusijalla.
   /// Jos A:n ensimmäinen matkustaja ei sovi bussiin,
   /// tarkistetaan jonon B ensimmäinen matkustaja.
   ///
-  /// Prosessia jatketaan, kunnes yksikään bussi
-  /// ei voi ottaa lisää matkustajia.
+  /// Jonossa ei koskaan ohiteta ensimmäistä matkustajaa.
+  ///
+  /// Tämä suunnitelma mahdollistaa matkustajien
+  /// yksittäisen animaation GamePage-luokassa.
+  static List<BoardingAction> createBoardingPlan({
+    required List<Bus?> parkingSlots,
+    required List<Customer> queueA,
+    required List<Customer> queueB,
+  }) {
+    final parking = List<Bus?>.from(parkingSlots);
+    final remainingA = List<Customer>.from(queueA);
+    final remainingB = List<Customer>.from(queueB);
+
+    final actions = <BoardingAction>[];
+
+    var changed = true;
+
+    while (changed) {
+      changed = false;
+
+      for (var i = 0; i < parking.length; i++) {
+        final parkedBus = parking[i];
+
+        if (parkedBus == null) {
+          continue;
+        }
+
+        var bus = parkedBus;
+
+        while (!bus.isFull) {
+          Customer? nextCustomer;
+          BoardingQueue? sourceQueue;
+
+          if (remainingA.isNotEmpty &&
+              remainingA.first.color == bus.color) {
+            nextCustomer = remainingA.removeAt(0);
+            sourceQueue = BoardingQueue.a;
+          } else if (remainingB.isNotEmpty &&
+              remainingB.first.color == bus.color) {
+            nextCustomer = remainingB.removeAt(0);
+            sourceQueue = BoardingQueue.b;
+          }
+
+          if (nextCustomer == null || sourceQueue == null) {
+            break;
+          }
+
+          actions.add(
+            BoardingAction(
+              parkingSlotIndex: i,
+              customer: nextCustomer,
+              queue: sourceQueue,
+            ),
+          );
+
+          bus = bus.copyWith(
+            passengers: bus.passengers + 1,
+          );
+
+          changed = true;
+        }
+
+        if (bus.isFull) {
+          parking[i] = null;
+          changed = true;
+        } else {
+          parking[i] = bus;
+        }
+      }
+    }
+
+    return actions;
+  }
+
+  /// Käsittelee pysäköityjen bussien matkustajat.
+  ///
+  /// Säilyttää aiemman välittömän nousutoiminnon.
+  /// Uusi animaatio voidaan toteuttaa käyttämällä
+  /// createBoardingPlan-metodia.
   static GameServiceResult processBoarding({
     required List<Bus?> parkingSlots,
     required List<Customer> queueA,
@@ -228,6 +308,25 @@ class GameService {
         queueA.isEmpty &&
         queueB.isEmpty;
   }
+}
+
+/// Matkustajan nousussa käytettävä jonon tunniste.
+enum BoardingQueue {
+  a,
+  b,
+}
+
+/// Yksittäinen matkustajan nousutapahtuma.
+class BoardingAction {
+  final int parkingSlotIndex;
+  final Customer customer;
+  final BoardingQueue queue;
+
+  const BoardingAction({
+    required this.parkingSlotIndex,
+    required this.customer,
+    required this.queue,
+  });
 }
 
 /// Pelitilan tulos matkustajien käsittelyn jälkeen.
