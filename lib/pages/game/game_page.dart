@@ -11,6 +11,7 @@ import '../../services/game_completion_service.dart';
 import '../../services/game_service.dart';
 import '../../services/level_service.dart';
 import '../../services/passenger_boarding_service.dart';
+import '../../widgets/bus_parking_animation.dart';
 import '../../widgets/customer_queues.dart';
 import '../../widgets/game_board_section.dart';
 import '../../widgets/game_bottom_info.dart';
@@ -39,6 +40,9 @@ class _GamePageState extends State<GamePage>
   static const Duration _passengerAnimationDuration =
       Duration(milliseconds: 550);
 
+  static const Duration _busParkingAnimationDuration =
+      Duration(milliseconds: 650);
+
   late Level _level;
 
   late List<Bus> _buses;
@@ -56,13 +60,24 @@ class _GamePageState extends State<GamePage>
   final List<GlobalKey> _busAnchorKeys =
       List.generate(5, (_) => GlobalKey());
 
+  Map<String, GlobalKey> _boardBusAnchorKeys = {};
+
   late final AnimationController _passengerAnimationController;
+  late final AnimationController _busParkingAnimationController;
 
   Offset? _passengerStart;
   Offset? _passengerEnd;
   Color? _movingPassengerColor;
 
+  Bus? _animatingBus;
+  Offset? _busAnimationStart;
+  Offset? _busAnimationEnd;
+  Size? _busAnimationStartSize;
+
+  static const Size _busAnimationEndSize = Size(43, 43);
+
   bool _showMovingPassenger = false;
+  bool _showMovingBus = false;
 
   bool _levelCompleted = false;
   bool _savingCompletion = false;
@@ -80,12 +95,18 @@ class _GamePageState extends State<GamePage>
       duration: _passengerAnimationDuration,
     );
 
+    _busParkingAnimationController = AnimationController(
+      vsync: this,
+      duration: _busParkingAnimationDuration,
+    );
+
     _loadLevel(widget.levelNumber);
   }
 
   @override
   void dispose() {
     _passengerAnimationController.dispose();
+    _busParkingAnimationController.dispose();
     super.dispose();
   }
 
@@ -95,6 +116,10 @@ class _GamePageState extends State<GamePage>
     _buses = List<Bus>.from(_level.buses);
     _queueA = List<Customer>.from(_level.queueA);
     _queueB = List<Customer>.from(_level.queueB);
+
+    _boardBusAnchorKeys = {
+      for (final bus in _buses) bus.id: GlobalKey(),
+    };
 
     _parkingSlots = List<Bus?>.filled(
       GameService.parkingSlots + _unlockedExtraSlots,
@@ -111,7 +136,15 @@ class _GamePageState extends State<GamePage>
     _passengerStart = null;
     _passengerEnd = null;
     _movingPassengerColor = null;
+
+    _showMovingBus = false;
+    _animatingBus = null;
+    _busAnimationStart = null;
+    _busAnimationEnd = null;
+    _busAnimationStartSize = null;
+
     _passengerAnimationController.reset();
+    _busParkingAnimationController.reset();
   }
 
   Future<void> _confirmExitToHome() async {
@@ -199,6 +232,7 @@ class _GamePageState extends State<GamePage>
                     buses: _buses,
                     onBusTap: _onBusTap,
                     canBusMove: _canBusMove,
+                    busAnchorKeys: _boardBusAnchorKeys,
                   ),
                   const GameBottomInfo(),
                 ],
@@ -210,6 +244,19 @@ class _GamePageState extends State<GamePage>
                 start: _passengerStart,
                 end: _passengerEnd,
                 passengerColor: _movingPassengerColor,
+              ),
+            if (_showMovingBus &&
+                _animatingBus != null &&
+                _busAnimationStart != null &&
+                _busAnimationEnd != null &&
+                _busAnimationStartSize != null)
+              BusParkingAnimation(
+                bus: _animatingBus!,
+                animation: _busParkingAnimationController,
+                start: _busAnimationStart!,
+                end: _busAnimationEnd!,
+                startSize: _busAnimationStartSize!,
+                endSize: _busAnimationEndSize,
               ),
           ],
         ),
@@ -240,6 +287,23 @@ class _GamePageState extends State<GamePage>
     );
 
     return overlayObject.globalToLocal(globalCenter);
+  }
+
+  Size? _getWidgetSize(GlobalKey key) {
+    final widgetContext = key.currentContext;
+
+    if (widgetContext == null) {
+      return null;
+    }
+
+    final renderObject = widgetContext.findRenderObject();
+
+    if (renderObject is! RenderBox ||
+        !renderObject.hasSize) {
+      return null;
+    }
+
+    return renderObject.size;
   }
 
   Future<void> _animatePassenger(BoardingAction action) async {
@@ -363,9 +427,65 @@ class _GamePageState extends State<GamePage>
       return;
     }
 
+    final boardAnchorKey = _boardBusAnchorKeys[bus.id];
+
+    if (boardAnchorKey == null) {
+      _showMessage('Could not locate the bus on the board.');
+      return;
+    }
+
     setState(() {
       _boardingInProgress = true;
+    });
+
+    await WidgetsBinding.instance.endOfFrame;
+
+    if (!mounted) {
+      return;
+    }
+
+    final start = _getWidgetCenter(boardAnchorKey);
+    final startSize = _getWidgetSize(boardAnchorKey);
+    final end = _getWidgetCenter(_busAnchorKeys[freeSlot]);
+
+    if (start == null ||
+        startSize == null ||
+        end == null) {
+      setState(() {
+        _boardingInProgress = false;
+      });
+
+      _showMessage('Could not measure the bus parking route.');
+      return;
+    }
+
+    setState(() {
       _buses.removeAt(busIndex);
+
+      _animatingBus = bus;
+      _busAnimationStart = start;
+      _busAnimationEnd = end;
+      _busAnimationStartSize = startSize;
+
+      _showMovingBus = true;
+    });
+
+    _busParkingAnimationController.reset();
+
+    try {
+      await _busParkingAnimationController.forward().orCancel;
+    } on TickerCanceled {
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _showMovingBus = false;
+      _animatingBus = null;
+
       _parkingSlots[freeSlot] = bus;
     });
 
