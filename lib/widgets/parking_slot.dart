@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
@@ -8,6 +9,7 @@ class ParkingSlot extends StatelessWidget {
   final Bus? bus;
   final bool isUnlocked;
   final VoidCallback? onUnlock;
+  final GlobalKey? busAnchorKey;
 
   const ParkingSlot({
     super.key,
@@ -15,6 +17,7 @@ class ParkingSlot extends StatelessWidget {
     this.bus,
     this.isUnlocked = true,
     this.onUnlock,
+    this.busAnchorKey,
   });
 
   @override
@@ -67,35 +70,38 @@ class ParkingSlot extends StatelessWidget {
 
   Widget _buildUnlockedSlot() {
     if (bus != null) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 43,
-            height: 43,
-            decoration: BoxDecoration(
-              color: bus!.color.withValues(alpha: 0.13),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: bus!.color.withValues(alpha: 0.35),
+      return KeyedSubtree(
+        key: busAnchorKey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 43,
+              height: 43,
+              decoration: BoxDecoration(
+                color: bus!.color.withValues(alpha: 0.13),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: bus!.color.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Icon(
+                Icons.directions_bus_rounded,
+                color: bus!.color,
+                size: 29,
               ),
             ),
-            child: Icon(
-              Icons.directions_bus_rounded,
-              color: bus!.color,
-              size: 29,
+            const SizedBox(height: 5),
+            Text(
+              '${bus!.passengers}/${bus!.capacity}',
+              style: const TextStyle(
+                color: AppColors.primaryText,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            '${bus!.passengers}/${bus!.capacity}',
-            style: const TextStyle(
-              color: AppColors.primaryText,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 
