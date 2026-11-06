@@ -11,7 +11,7 @@ import '../../services/game_service.dart';
 import '../../services/level_service.dart';
 import '../../services/progress_service.dart';
 import '../../widgets/customer_queues.dart';
-import '../../widgets/game_board.dart';
+import '../../widgets/game_board_section.dart';
 import '../../widgets/game_dialogs.dart';
 import '../../widgets/game_header.dart';
 import '../../widgets/parking_area.dart';
@@ -192,7 +192,12 @@ class _GamePageState extends State<GamePage>
                     busAnchorKeys: _busAnchorKeys,
                     onUnlockSlot: _showAdMessage,
                   ),
-                  _buildBoardSection(),
+                  GameBoardSection(
+                    boardSize: _level.boardSize,
+                    buses: _buses,
+                    onBusTap: _onBusTap,
+                    canBusMove: _canBusMove,
+                  ),
                   _buildBottomInfo(),
                 ],
               ),
@@ -285,41 +290,6 @@ class _GamePageState extends State<GamePage>
     setState(() {
       _showMovingPassenger = false;
     });
-  }
-
-  Widget _buildBoardSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 8,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(
-              left: 4,
-              bottom: 10,
-            ),
-            child: Text(
-              'BUS PUZZLE',
-              style: TextStyle(
-                color: AppColors.primaryText,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
-          ),
-          GameBoard(
-            boardSize: _level.boardSize,
-            buses: _buses,
-            onBusTap: _onBusTap,
-            canBusMove: _canBusMove,
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildBottomInfo() {
