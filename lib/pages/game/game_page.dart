@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -14,6 +13,7 @@ import '../../widgets/customer_queues.dart';
 import '../../widgets/game_board.dart';
 import '../../widgets/game_header.dart';
 import '../../widgets/parking_area.dart';
+import '../../widgets/passenger_animation.dart';
 
 class GamePage extends StatefulWidget {
   final int levelNumber;
@@ -34,8 +34,6 @@ class _GamePageState extends State<GamePage>
 
   static const Duration _passengerAnimationDuration =
       Duration(milliseconds: 550);
-
-  static const double _passengerAnimationArc = 55;
 
   late Level _level;
 
@@ -286,67 +284,13 @@ class _GamePageState extends State<GamePage>
               ),
             ),
             if (_showMovingPassenger)
-              _buildPassengerAnimation(),
+              PassengerAnimation(
+                animation: _passengerAnimationController,
+                start: _passengerStart,
+                end: _passengerEnd,
+                passengerColor: _movingPassengerColor,
+              ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPassengerAnimation() {
-    return AnimatedBuilder(
-      animation: _passengerAnimationController,
-      builder: (context, child) {
-        final progress = Curves.easeInOutCubic.transform(
-          _passengerAnimationController.value,
-        );
-
-        final start = _passengerStart ?? Offset.zero;
-        final end = _passengerEnd ?? Offset.zero;
-
-        final position = Offset.lerp(
-          start,
-          end,
-          progress,
-        )!;
-
-        final arc = math.sin(progress * math.pi) *
-            _passengerAnimationArc;
-
-        final scale = 1.0 - (progress * 0.12);
-
-        return Positioned(
-          left: position.dx - 17,
-          top: position.dy - 17 - arc,
-          child: Transform.scale(
-            scale: scale,
-            child: child,
-          ),
-        );
-      },
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: _movingPassengerColor ?? AppColors.purple,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white,
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: (_movingPassengerColor ?? AppColors.purple)
-                  .withValues(alpha: 0.55),
-              blurRadius: 14,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: const Icon(
-          Icons.person_rounded,
-          color: Colors.white,
-          size: 22,
         ),
       ),
     );
