@@ -12,12 +12,16 @@ class GameBoard extends StatefulWidget {
   final ValueChanged<Bus>? onBusTap;
   final bool Function(Bus)? canBusMove;
 
+  /// Measurement anchors for individual buses, indexed by bus ID.
+  final Map<String, GlobalKey>? busAnchorKeys;
+
   const GameBoard({
     super.key,
     this.boardSize = 8,
     this.buses = const [],
     this.onBusTap,
     this.canBusMove,
+    this.busAnchorKeys,
   });
 
   @override
@@ -167,6 +171,8 @@ class _GameBoardState extends State<GameBoard> {
       }
     }
 
+    final busAnchorKey = widget.busAnchorKeys?[bus.id];
+
     return AnimatedPositioned(
       key: ValueKey(bus.id),
       duration: _animationDuration,
@@ -179,40 +185,43 @@ class _GameBoardState extends State<GameBoard> {
         onTap: isAnimating
             ? null
             : () => _handleBusTap(bus),
-        child: Container(
-          margin: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                bus.color,
-                bus.color.withValues(alpha: 0.78),
+        child: KeyedSubtree(
+          key: busAnchorKey,
+          child: Container(
+            margin: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  bus.color,
+                  bus.color.withValues(alpha: 0.78),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.75),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: bus.color.withValues(alpha: 0.28),
+                  blurRadius: 9,
+                  offset: const Offset(2, 3),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 5,
+                  offset: const Offset(2, 3),
+                ),
               ],
             ),
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.75),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: bus.color.withValues(alpha: 0.28),
-                blurRadius: 9,
-                offset: const Offset(2, 3),
+            child: Center(
+              child: Icon(
+                _exitArrow(bus),
+                color: Colors.white,
+                size: 25,
               ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 5,
-                offset: const Offset(2, 3),
-              ),
-            ],
-          ),
-          child: Center(
-            child: Icon(
-              _exitArrow(bus),
-              color: Colors.white,
-              size: 25,
             ),
           ),
         ),
