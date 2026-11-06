@@ -17,46 +17,130 @@ class LevelDifficulty {
   });
 }
 
+/// Palauttaa kentän tavoitevaikeuden väliltä 10–80.
+///
+/// Vaikeus kasvaa asteittain koko 2 000 kentän matkalla.
+/// Myöhemmin LevelBuilder käyttää tätä arvoa valitessaan
+/// vaikeusanalyysin perusteella sopivaa kenttärakennetta.
 int targetDifficultyScoreForLevel(int level) {
   if (level < 1) {
     throw ArgumentError.value(
       level,
       'level',
-      'Level must be at least 1.',
+      'Level number must be at least 1.',
     );
   }
 
-  if (level <= 20) {
-    return 10 + ((level - 1) * 15 ~/ 19);
-  }
-
-  if (level <= 40) {
-    return 26 + ((level - 21) * 9 ~/ 19);
-  }
-
-  if (level <= 60) {
-    return 36 + ((level - 41) * 9 ~/ 19);
-  }
-
-  if (level <= 80) {
-    return 46 + ((level - 61) * 9 ~/ 19);
-  }
-
   if (level <= 100) {
-    return 56 + ((level - 81) * 9 ~/ 19);
+    return _interpolate(
+      level,
+      1,
+      100,
+      10,
+      25,
+    );
   }
 
-  return 65 + ((level - 100) * 5 ~/ 100);
+  if (level <= 300) {
+    return _interpolate(
+      level,
+      101,
+      300,
+      25,
+      38,
+    );
+  }
+
+  if (level <= 600) {
+    return _interpolate(
+      level,
+      301,
+      600,
+      38,
+      50,
+    );
+  }
+
+  if (level <= 1000) {
+    return _interpolate(
+      level,
+      601,
+      1000,
+      50,
+      60,
+    );
+  }
+
+  if (level <= 1500) {
+    return _interpolate(
+      level,
+      1001,
+      1500,
+      60,
+      68,
+    );
+  }
+
+  if (level <= 1800) {
+    return _interpolate(
+      level,
+      1501,
+      1800,
+      68,
+      75,
+    );
+  }
+
+  if (level <= 2000) {
+    return _interpolate(
+      level,
+      1801,
+      2000,
+      75,
+      80,
+    );
+  }
+
+  // Yli 2 000 kentän vaikeus jatkaa kasvuaan
+  // hitaammin, jotta järjestelmä on laajennettavissa.
+  return _interpolate(
+    level,
+    2001,
+    5000,
+    80,
+    95,
+  );
 }
 
+int _interpolate(
+  int level,
+  int startLevel,
+  int endLevel,
+  int startScore,
+  int endScore,
+) {
+  if (startLevel == endLevel) {
+    return endScore;
+  }
+
+  final progress = level - startLevel;
+  final range = endLevel - startLevel;
+
+  return startScore +
+      ((endScore - startScore) * progress ~/ range);
+}
+
+/// Palauttaa kentän rakenteelliset vaikeusasetukset.
 LevelDifficulty difficultyForLevel(int level) {
   if (level < 1) {
     throw ArgumentError.value(
       level,
       'level',
-      'Level must be at least 1.',
+      'Level number must be at least 1.',
     );
   }
+
+  final targetScore = targetDifficultyScoreForLevel(level);
 
   if (level <= 20) {
     return LevelDifficulty(
@@ -65,8 +149,7 @@ LevelDifficulty difficultyForLevel(int level) {
       busCount: 12,
       customers: 100,
       stage: 'Alkuvaihe',
-      targetDifficultyScore:
-          targetDifficultyScoreForLevel(level),
+      targetDifficultyScore: targetScore,
     );
   }
 
@@ -77,8 +160,7 @@ LevelDifficulty difficultyForLevel(int level) {
       busCount: 15,
       customers: 125,
       stage: 'Viisi väriä',
-      targetDifficultyScore:
-          targetDifficultyScoreForLevel(level),
+      targetDifficultyScore: targetScore,
     );
   }
 
@@ -89,8 +171,18 @@ LevelDifficulty difficultyForLevel(int level) {
       busCount: 18,
       customers: 150,
       stage: 'Kuusi väriä',
-      targetDifficultyScore:
-          targetDifficultyScoreForLevel(level),
+      targetDifficultyScore: targetScore,
+    );
+  }
+
+  if (level <= 600) {
+    return LevelDifficulty(
+      boardSize: 12,
+      colorCount: 6,
+      busCount: 18,
+      customers: 150,
+      stage: 'Kehittyminen',
+      targetDifficultyScore: targetScore,
     );
   }
 
@@ -100,9 +192,30 @@ LevelDifficulty difficultyForLevel(int level) {
       colorCount: 7,
       busCount: 21,
       customers: 175,
-      stage: 'Seitsemän väriä',
-      targetDifficultyScore:
-          targetDifficultyScoreForLevel(level),
+      stage: 'Haaste',
+      targetDifficultyScore: targetScore,
+    );
+  }
+
+  if (level <= 1500) {
+    return LevelDifficulty(
+      boardSize: 14,
+      colorCount: 7,
+      busCount: 21,
+      customers: 175,
+      stage: 'Mestaruus',
+      targetDifficultyScore: targetScore,
+    );
+  }
+
+  if (level <= 1800) {
+    return LevelDifficulty(
+      boardSize: 16,
+      colorCount: 8,
+      busCount: 24,
+      customers: 200,
+      stage: 'Stella Expert',
+      targetDifficultyScore: targetScore,
     );
   }
 
@@ -111,8 +224,7 @@ LevelDifficulty difficultyForLevel(int level) {
     colorCount: 8,
     busCount: 24,
     customers: 200,
-    stage: 'Kahdeksan väriä',
-    targetDifficultyScore:
-        targetDifficultyScoreForLevel(level),
+    stage: 'Stella Master',
+    targetDifficultyScore: targetScore,
   );
 }
