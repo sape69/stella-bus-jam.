@@ -6,9 +6,9 @@ import '../../core/constants/app_colors.dart';
 import '../../models/bus.dart';
 import '../../models/customer.dart';
 import '../../models/level.dart';
+import '../../services/game_completion_service.dart';
 import '../../services/game_service.dart';
 import '../../services/level_service.dart';
-import '../../services/progress_service.dart';
 import '../../widgets/customer_queues.dart';
 import '../../widgets/game_board_section.dart';
 import '../../widgets/game_bottom_info.dart';
@@ -464,18 +464,6 @@ class _GamePageState extends State<GamePage>
     _showMessage('$message Mistakes: $_mistakes');
   }
 
-  int _calculateStars() {
-    if (_mistakes == 0) {
-      return 3;
-    }
-
-    if (_mistakes <= 2) {
-      return 2;
-    }
-
-    return 1;
-  }
-
   void _checkLevelCompletion() {
     final completed = GameService.isLevelComplete(
       remainingBuses: _buses,
@@ -490,33 +478,20 @@ class _GamePageState extends State<GamePage>
 
     _levelCompleted = true;
     _savingCompletion = true;
-    _earnedStars = _calculateStars();
+    _earnedStars = GameCompletionService.calculateStars(_mistakes);
 
     _saveCompletionAndShowDialog();
   }
 
   Future<void> _saveCompletionAndShowDialog() async {
-    try {
-      await ProgressService.saveLevelCompletion(
-        levelNumber: _level.number,
-        stars: _earnedStars,
-      );
-    } catch (error) {
-      if (mounted) {
-        _showMessage('Could not save progress: $error');
-      }
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    _savingCompletion = false;
-
-    GameDialogs.showLevelCompleted(
+    await GameCompletionService.saveAndShowDialog(
       context: context,
+      levelNumber: _level.number,
       stars: _earnedStars,
       mistakes: _mistakes,
+      onError: () {
+        _showMessage('Could not save progress.');
+      },
       onNextLevel: () {
         if (!mounted) {
           return;
@@ -527,6 +502,12 @@ class _GamePageState extends State<GamePage>
         });
       },
     );
+
+    if (!mounted) {
+      return;
+    }
+
+    _savingCompletion = false;
   }
 
   void _showMessage(String message) {
